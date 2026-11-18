@@ -25,5 +25,6 @@
 - [x] 10. Expose the scan
   - CLI `graveyard scan` (`src/cli.ts`), `GET /api/scan/example` and `POST /api/scan` (`src/server/app.ts`), MCP `graveyard_scan` (`src/mcp/server.ts`)
 - [x] 11. Graveyard map in the web UI (`web/src/components/GraveyardMap.tsx`)
-- [ ] 12. Scan three real public repositories and publish the zombie counts in the write-up
+- [x] 12. Scan three real public repositories and publish the zombie counts in the write-up (`docs/REAL-WORLD.md`)
+- [x] 12a. Treat a deprecated old version of a living package as an upgrade, not a zombie: false positive found by the pdf.js scan (`glob@10/11`). `Signals.versionDeprecated` in `src/core/scanner.ts`, property test in `test/score.test.ts`
 - [ ] 13. Second ecosystem (planned, not started)

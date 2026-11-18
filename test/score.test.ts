@@ -12,6 +12,7 @@ const advisory = fc.record<Advisory>({
 
 const signals = fc.record<Signals>({
   deprecated: fc.boolean(),
+  versionDeprecated: fc.boolean(),
   daysSinceLastPublish: fc.integer({ min: 0, max: 8000 }),
   repo: fc.constantFrom('active', 'archived', 'missing', 'unknown'),
   advisories: fc.array(advisory, { maxLength: 4 }),
@@ -70,6 +71,17 @@ describe('zombie score (property-based)', () => {
       fc.property(signals, (s) => {
         if (s.deprecated || s.repo === 'archived') expect(scorePackage(s).zombie).toBe(true);
         if (!s.deprecated && s.repo !== 'archived' && s.daysSinceLastPublish < DORMANT_DAYS) expect(statusOf(s)).toBe('alive');
+      }),
+    );
+  });
+
+  it('a deprecated old version of a living package is an upgrade, never a zombie', () => {
+    fc.assert(
+      fc.property(signals, (s) => {
+        const living = { ...s, deprecated: false, versionDeprecated: true, repo: 'active' as const, daysSinceLastPublish: s.daysSinceLastPublish % DORMANT_DAYS };
+        const score = scorePackage(living);
+        expect(score.zombie).toBe(false);
+        expect(score.reasons.some((r) => r.includes('upgrade'))).toBe(true);
       }),
     );
   });

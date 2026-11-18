@@ -6,7 +6,7 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 
 | Item | Status |
 | --- | --- |
-| Scanner, graveyard map, Inline and Replace routes, proof tests, PR output | Built and tested (`npm test`, 37 tests) |
+| Scanner, graveyard map, Inline and Replace routes, proof tests, PR output | Built and tested (`npm test`, 38 tests) |
 | Keeper (Warden) with memory, scheduled patrol | Built as CLI + `.github/workflows/warden.yml` |
 | MCP server, `.kiro` specs/steering/hooks/agents, Power | Written; validate hooks, agents and the Power inside Kiro |
 | Hosted demo with sample data | `npm run build` → static `web/dist` replays a recorded real run |
@@ -15,7 +15,8 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 | Public GitHub repo with MIT licence shown in About | You: create the repo, push, set the licence |
 | `.kiro` committed and not in `.gitignore` | Done (`.gitignore` does not list it) |
 | Demo video under 3 minutes, public on YouTube | You |
-| Blog post (Bonus Blog), Social Blitz post | You |
+| Blog post (Bonus Blog), Social Blitz post | Drafts in `docs/BLOG.md` and `docs/SOCIAL.md`; you publish them |
+| Scan of three real public repos (Impact) | Done: `docs/REAL-WORLD.md` |
 | 4,000 Kiro credits request (by Dec 1, 12:00 pm Pacific) | You |
 
 Rules note: the rules ask for real Kiro use and may analyse the `/.kiro` folder. Keep building in Kiro from here (run the specs' remaining tasks, trigger the hooks, use the agents) so the history shows it. Disclose any code that existed before October 30, 2026.
@@ -34,7 +35,7 @@ Built spec-first in Kiro: four feature specs and a bugfix spec, steering for the
 
 | Time | On screen | Say |
 | --- | --- | --- |
-| 0:00–0:20 | `node bin/graveyard.mjs scan examples/haunted-app`: "46 of 55 packages are zombies" | "Most codebases depend on code nobody maintains. Nothing fixes it." |
+| 0:00–0:20 | `node bin/graveyard.mjs scan examples/haunted-app`: "45 of 55 packages are zombies" | "Most codebases depend on code nobody maintains. Nothing fixes it." |
 | 0:20–0:50 | UI: Scan example project. The graveyard draws, and trim carries the red flaw mark | "Graveyard Shift finds the zombies and ranks them by risk. This one has a known ReDoS flaw." |
 | 0:50–1:50 | Click left-pad. Show the Coroner verdict, then Resurrect. Candidate 1 (padStart) is rejected with the counterexample, candidate 2 is proven, replay and project tests pass | "The Coroner picks the safest fix. The Surgeon tries what the deprecation notice suggests, and the proof catches it: false becomes the letter f. The second candidate agrees on 500 generated inputs." |
 | 1:50–2:15 | PR card: description and diff. Keepers tab, then Simulate advisory on is-number: the patch PR is drafted and the memory updates | "Every fix is a pull request with its proof. A keeper bot stays on watch and remembers every decision." (The simulation is labelled on screen.) |
@@ -46,4 +47,4 @@ Before recording: run `npm start`, click **Reset**, and use generic words on scr
 ## Ideas for proof numbers in the write-up
 
 - From the sample app: 7 of 8 direct zombies fixed automatically, 1 escalated (`request`), and 3 naive candidates rejected by the proof.
-- Run `node bin/graveyard.mjs scan <dir>` on three real public repositories with `GITHUB_TOKEN` set, and report the zombie counts (the brief suggests this for the Impact score).
+- Real projects: 28–35% of installed packages are zombies in pdf.js, jitsi-meet and bitwarden/clients, 105 of them chosen directly (`docs/REAL-WORLD.md`). Rerun with `GITHUB_TOKEN` set before recording, to include archived repos.

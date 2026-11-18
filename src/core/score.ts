@@ -46,6 +46,7 @@ export function scorePackage(s: Signals): Score {
   const reasons: string[] = [];
 
   if (s.deprecated) reasons.push('Deprecated by its author');
+  if (s.versionDeprecated && !s.deprecated) reasons.push('Installed version is deprecated; a maintained release exists, so upgrade it');
   if (s.repo === 'archived') reasons.push('Source repository is archived');
   if (s.repo === 'missing') reasons.push('Source repository no longer exists');
   if (s.daysSinceLastPublish >= 365) {
@@ -65,9 +66,10 @@ export function scorePackage(s: Signals): Score {
   if (s.usageSites > 0) reasons.push(`Imported at ${s.usageSites} site${s.usageSites === 1 ? '' : 's'} in ${s.usageFiles} file${s.usageFiles === 1 ? '' : 's'}`);
 
   const direct = s.direct ? 10 : 0;
+  const outdated = s.versionDeprecated && !s.deprecated ? 8 : 0;
   // A living package with a flaw still matters, but less than a dead one: someone will ship the fix.
   const flawWeight = zombie ? 1 : 0.5;
-  const risk = clamp(Math.round(dead * 40 + flaw * flawWeight + exposure + direct), 0, 100);
+  const risk = clamp(Math.round(dead * 40 + flaw * flawWeight + exposure + direct + outdated), 0, 100);
 
   return { status, deadness: dead, risk, zombie, reasons };
 }

@@ -51,7 +51,10 @@ export interface RegistryFacts {
 }
 
 export interface Signals {
+  /** The package as a whole is deprecated (its latest release, or every release if none is recent). */
   deprecated: boolean;
+  /** Only the installed version is deprecated and a maintained release exists: an upgrade, not a resurrection. */
+  versionDeprecated?: boolean;
   daysSinceLastPublish: number;
   repo: RepoState;
   advisories: Advisory[];

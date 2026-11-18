@@ -37,6 +37,16 @@ On the bundled `examples/haunted-app`, from a real run:
 
 Naive replacements, including the ones the deprecation notices suggest, failed for three of the seven packages. That is why every fix has to pass the proof before it becomes a pull request.
 
+### On real projects
+
+| Project | Packages | Zombies | Chosen directly |
+| --- | ---: | ---: | ---: |
+| mozilla/pdf.js | 822 | 232 (28%) | 6 |
+| jitsi/jitsi-meet | 1,700 | 593 (35%) | 60 |
+| bitwarden/clients | 2,640 | 755 (29%) | 39 |
+
+These scans ran on November 18, 2026 without GitHub checks, so archived repos are undercounted. Method, caveats and a false positive these scans found (now fixed) are in [docs/REAL-WORLD.md](docs/REAL-WORLD.md).
+
 ## Quick start (3 steps)
 
 Requires Node.js 22.13 or later (CI uses 24) and git.

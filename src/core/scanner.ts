@@ -6,7 +6,7 @@ import { scanUsage, type UsageIndex } from './imports.ts';
 import { parseLockfile } from './lockfile.ts';
 import { advisoriesFor } from './osv.ts';
 import { factsFor, getPackageDoc, type PackageDoc } from './registry.ts';
-import { daysBetween, scorePackage } from './score.ts';
+import { DORMANT_DAYS, daysBetween, scorePackage } from './score.ts';
 import type { Advisory, ScannedPackage, ScanReport, Signals } from './types.ts';
 
 export interface ScanInput {
@@ -83,9 +83,14 @@ export async function scan(input: ScanInput): Promise<ScanReport> {
     const facts = doc ? factsFor(doc, pkg.version) : undefined;
     const perFile = usage?.byPackage.get(pkg.name);
     const importedBy = perFile ? [...perFile.keys()].sort() : [];
+    const daysSinceLastPublish = facts ? daysBetween(facts.lastPublish, now) : 0;
+    // A deprecated old version of a living package is a job for version bots,
+    // not a zombie: only count deprecation when the package itself is dead.
+    const packageDeprecated = Boolean(facts?.latestDeprecated) || (Boolean(facts?.deprecated) && daysSinceLastPublish >= DORMANT_DAYS);
     const signals: Signals = {
-      deprecated: Boolean(facts?.deprecated),
-      daysSinceLastPublish: facts ? daysBetween(facts.lastPublish, now) : 0,
+      deprecated: packageDeprecated,
+      versionDeprecated: Boolean(facts?.deprecated) && !packageDeprecated,
+      daysSinceLastPublish,
       repo: repoByName.get(pkg.name)?.state ?? 'unknown',
       advisories: advisories.get(`${pkg.name}@${pkg.version}`) ?? [],
       usageSites: perFile ? [...perFile.values()].reduce((a, b) => a + b, 0) : 0,
