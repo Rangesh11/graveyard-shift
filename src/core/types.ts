@@ -19,6 +19,8 @@ export interface LockedPackage {
   dependents: string[];
   /** Runtime dependency names declared by this package. */
   dependencies: string[];
+  /** Set when installed under another name ("pad": "npm:left-pad@1.3.0"). */
+  alias?: string;
 }
 
 export interface Advisory {
@@ -216,6 +218,8 @@ export interface KeeperRecord {
   lastPatrol?: string;
   lastKnownUpstream?: string;
   decisions: WardenDecision[];
+  /** In memory only: true when the keeper lives in the committed graveyard/warden.json. */
+  committed?: boolean;
 }
 
 export interface WardenMemory {

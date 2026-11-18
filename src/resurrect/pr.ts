@@ -11,6 +11,8 @@ export interface PrContext {
   originalSource: string;
   integrity?: string;
   license?: string;
+  /** Licence file copied with an inlined package, if the package has one. */
+  licenseFile?: string;
   removedFromLockfile: boolean;
   stillNeededBy: string[];
   riskNotes: string[];
@@ -62,7 +64,7 @@ export function renderPrBody(c: PrContext): string {
   lines.push('');
   lines.push(
     `${final.proof.totalRuns} generated inputs, seed \`${final.proof.properties[0]?.seed}\`, ${final.proof.durationMs} ms. ` +
-      (final.proof.sandboxed ? 'Ran in a Node.js permission-model sandbox: read-only file access, no child processes, empty environment.' : ''),
+      (final.proof.sandboxed ? 'Ran in a Node.js permission-model sandbox: read-only file access, no child processes, empty environment (network is not restricted by Node 24).' : ''),
   );
   lines.push('');
 
@@ -96,9 +98,15 @@ export function renderPrBody(c: PrContext): string {
   lines.push('');
 
   lines.push('### Provenance');
-  lines.push(`- Original: \`${pkg.name}@${pkg.version}\` (${c.originalSource === 'node_modules' ? 'installed copy, matching the lockfile version' : 'registry tarball, hash-checked against the lockfile'})`);
+  lines.push(`- Original: \`${pkg.name}@${pkg.version}\` (${c.originalSource === 'node_modules' ? 'installed copy, matching the lockfile version' : 'registry tarball, integrity hash verified before use'})`);
   if (c.integrity) lines.push(`- Integrity: \`${c.integrity.slice(0, 40)}…\``);
-  lines.push(`- Licence: ${c.license ?? 'not declared'}${d.route === 'inline' ? ' (licence file copied with the code)' : ' (no original code is copied)'}`);
+  const licenceNote =
+    d.route !== 'inline'
+      ? ' (no original code is copied)'
+      : c.licenseFile
+        ? ` (\`${c.licenseFile}\` copied with the code)`
+        : ' (the package ships no licence file; the licence is recorded in PROVENANCE.json)';
+  lines.push(`- Licence: ${c.license ?? 'not declared'}${licenceNote}`);
   if (d.recipe) lines.push(`- Recipe: \`${d.recipe}\`, candidate \`${final.candidate}\``);
   lines.push('');
 

@@ -13,6 +13,8 @@ export interface PatrolOptions {
 }
 
 export interface PatrolResult {
+  /** True when a decision worth keeping was made (advisory handled, release seen, patch drafted). */
+  changed: boolean;
   events: ProgressEvent[];
   memory: WardenMemory;
   drafts: PullRequestDraft[];
@@ -78,16 +80,19 @@ export async function patrol(root: string, opts: PatrolOptions = {}): Promise<Pa
     events.push({ stage: 'warden', message, at: Date.now() - started, ...(data === undefined ? {} : { data }) });
   const memory = await loadMemory(root);
   const drafts: PullRequestDraft[] = [];
+  let changed = false;
 
   if (!memory.keepers.length) {
     emit('No keepers yet. Resurrect a package first; its Warden starts watching after a proven fix.');
-    return { events, memory, drafts };
+    return { changed: false, events, memory, drafts };
   }
 
   let real = new Map<string, Advisory[]>();
+  let advisoriesChecked = true;
   try {
     real = await advisoriesFor(memory.keepers.map((k) => ({ name: k.package, version: k.version })));
   } catch (err) {
+    advisoriesChecked = false;
     emit(`Advisory database unreachable: ${(err as Error).message}. Will retry next patrol.`);
   }
 
@@ -105,11 +110,13 @@ export async function patrol(root: string, opts: PatrolOptions = {}): Promise<Pa
     if (latest && keeper.lastKnownUpstream && latest !== keeper.lastKnownUpstream) {
       remember(keeper, { kind: 'release', summary: `Upstream woke up: ${keeper.package}@${latest} published (was ${keeper.lastKnownUpstream}). Review before switching back.` }, now);
       emit(`${keeper.package}: upstream released ${latest}`);
+      changed = true;
       keeper.lastKnownUpstream = latest;
     }
 
     for (const advisory of fresh) {
       keeper.seenAdvisories.push(advisory.id);
+      changed = true;
       if (keeper.route === 'replace') {
         remember(
           keeper,
@@ -155,12 +162,15 @@ export async function patrol(root: string, opts: PatrolOptions = {}): Promise<Pa
     }
 
     keeper.lastPatrol = now.toISOString();
-    if (!fresh.length) {
+    if (!advisoriesChecked && !fresh.length) {
+      remember(keeper, { kind: 'patrol', summary: 'Advisory check skipped: the advisory database could not be reached. Nothing is known to be safe; retrying next patrol.' }, now);
+      emit(`${keeper.package}: advisory check skipped (database unreachable)`);
+    } else if (!fresh.length) {
       remember(keeper, { kind: 'patrol', summary: `All quiet: ${found.length} known advisories, all handled; upstream latest ${latest ?? 'unknown'}.` }, now);
       emit(`${keeper.package}: all quiet`);
     }
   }
 
   await saveMemory(root, memory);
-  return { events, memory, drafts };
+  return { changed, events, memory, drafts };
 }

@@ -75,3 +75,6 @@ export function lastSeen(pkg: ScannedPackage): string {
 export function plural(n: number, word: string, many = `${word}s`): string {
   return `${n} ${n === 1 ? word : many}`;
 }
+
+/** Packages can appear in several versions, so selection uses name@version. */
+export const pkgKey = (p: { name: string; version: string }) => `${p.name}@${p.version}`;

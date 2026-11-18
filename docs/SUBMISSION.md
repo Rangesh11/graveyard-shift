@@ -6,9 +6,10 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 
 | Item | Status |
 | --- | --- |
-| Scanner, graveyard map, Inline and Replace routes, proof tests, PR output | Built and tested (`npm test`, 38 tests, CI green) |
-| Keeper (Warden) with memory, scheduled patrol | Built as CLI + `.github/workflows/warden.yml` |
-| MCP server, `.kiro` specs/steering/hooks/agents, Power | Written; validate hooks, agents and the Power inside Kiro |
+| Scanner, graveyard map, Inline and Replace routes, proof tests, PR output | Built and tested (`npm test`, 49 tests, CI green); hardened after an independent audit |
+| Keeper (Warden) with memory, scheduled patrol | Built as CLI + `.github/workflows/warden.yml`; memory persists in the committed `graveyard/warden.json` via patrol PRs (tested locally, not yet run on a merged fix) |
+| MCP server, `.kiro` specs/steering/hooks/agents, Power | Written and the MCP server tested; the hooks, agents and Power have **never run in Kiro** — load them there |
+| Headless Surgeon (`surgeon.yml`) | Written, never run: needs the `KIRO_API_KEY` secret and `KIRO_CLI_INSTALL` variable |
 | Hosted demo with sample data | Live: https://rangesh11.github.io/graveyard-shift/ |
 | A fix opened as a real pull request | Done: [haunted-app#1](https://github.com/Rangesh11/haunted-app/pull/1) (left-pad), [haunted-app#2](https://github.com/Rangesh11/haunted-app/pull/2) (trim CVE); CI passes on both |
 | Adopt route automation, second ecosystem | Not built (stretch); Adopt is diagnosed and escalated |
@@ -20,7 +21,13 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 | Scan of three real public repos (Impact) | Done: `docs/REAL-WORLD.md` |
 | 4,000 Kiro credits request (by Dec 1, 12:00 pm Pacific) | You |
 
-Rules note: the rules ask for real Kiro use and may analyse the `/.kiro` folder. Keep building in Kiro from here (run the specs' remaining tasks, trigger the hooks, use the agents) so the history shows it. Disclose any code that existed before October 30, 2026.
+**Blocker, yours to fix: real Kiro use.** Stage one of judging is pass/fail on using Kiro for real, and judges may analyse `/.kiro`. Today there is no evidence of Kiro use: the code was written with Claude Code (every commit says so) and the `.kiro` files were written in one batch. Before submitting:
+
+1. Install Kiro, open this repo, and load the Power and the MCP server.
+2. Do real remaining work in Kiro: pick open tasks from `.kiro/specs/*/tasks.md` (for example "N of M fixes proven on real repositories", or a new recipe), let the hooks fire when you save `src/resurrect/recipes.ts`, and run the Coroner, Surgeon and Warden agents against `examples/haunted-app`.
+3. Commit that work so the history shows it, and describe honestly in the write-up which parts Kiro did and which an AI assistant did.
+
+All work here started after October 30, 2026, so there is no older code to disclose.
 
 ## Devpost description (draft)
 
@@ -30,7 +37,9 @@ Most software depends on open-source packages nobody maintains, so when a flaw t
 
 Every fix must pass a proof before it becomes a pull request. fast-check generates inputs and runs them through the original package and the new code in a sandbox; they must agree. On our sample app the proof rejected three naive replacements, including `String.prototype.padStart`, which left-pad's own deprecation notice recommends. `leftPad(0, 2, false)` returns `" 0"`, but `padStart` returns `"f0"`. The passing proof is recorded as a replay test that stays in the repo. After the fix, a Warden keeper watches the package for new advisories and remembers every decision.
 
-Built spec-first in Kiro: four feature specs and a bugfix spec, steering for the safety rules, hooks that rerun the proofs, a custom MCP server, Coroner/Surgeon/Warden agents, and a Power.
+Designed spec-first: four feature specs and a bugfix spec, steering for the safety rules, hooks that rerun the proofs, a custom MCP server, Coroner/Surgeon/Warden agents, and a Kiro Power. (Edit this to say exactly what you did in Kiro and what an AI assistant wrote.)
+
+Unlike paid end-of-life support such as HeroDevs Evergreen (closed source, launched November 5, 2026), Graveyard Shift is open source, runs in your own repo, and puts the proof in every pull request.
 
 ## Video script (aim for 2:50)
 

@@ -1,14 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import type { ScannedPackage } from '../types';
-import { lastSeen, plural, riskBand, STATUS_LABEL } from '../format';
+import { lastSeen, pkgKey, plural, riskBand, STATUS_LABEL } from '../format';
 
 interface Props {
   packages: ScannedPackage[];
+  /** Selected package as name@version. */
   selected: string | null;
+  /** Resurrected packages as name@version. */
   resurrected: Set<string>;
-  onSelect: (name: string) => void;
+  /** Called with name@version. */
+  onSelect: (key: string) => void;
 }
+
+type Width = 'wide' | 'medium' | 'narrow';
+/**
+ * viewBox width per breakpoint. Phones keep the compact 600 layout so the map
+ * stays short; the list under the map carries the readable names there.
+ */
+const VIEW_W: Record<Width, number> = { wide: 1000, medium: 600, narrow: 600 };
 
 interface PlacedStone {
   pkg: ScannedPackage;
@@ -30,20 +40,27 @@ const GAP = 20;
 
 export function GraveyardMap({ packages, selected, resurrected, onSelect }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
-  const [wide, setWide] = useState(true);
+  const [width, setWidth] = useState<Width>('wide');
   const [tip, setTip] = useState<Tooltip | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setWide(entry.contentRect.width >= 700));
+    const ro = new ResizeObserver(([entry]) => {
+      const w = entry.contentRect.width;
+      setWidth(w >= 700 ? 'wide' : w >= 520 ? 'medium' : 'narrow');
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
   const zombies = useMemo(() => packages.filter((p) => p.score.zombie), [packages]);
   const living = packages.length - zombies.length;
-  const layout = useMemo(() => layoutStones(zombies, wide ? 1000 : 600), [zombies, wide]);
+  const layout = useMemo(() => layoutStones(zombies, VIEW_W[width]), [zombies, width]);
+  const listed = useMemo(
+    () => [...zombies].sort((a, b) => Number(b.direct) - Number(a.direct) || b.score.risk - a.score.risk),
+    [zombies],
+  );
   const { W, H, stones, fenceY } = layout;
   const stars = useMemo(() => makeStars(W, fenceY), [W, fenceY]);
 
@@ -53,10 +70,10 @@ export function GraveyardMap({ packages, selected, resurrected, onSelect }: Prop
     setTip({ pkg, x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
 
-  const onKey = (name: string) => (e: KeyboardEvent<SVGGElement>) => {
+  const onKey = (key: string) => (e: KeyboardEvent<SVGGElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onSelect(name);
+      onSelect(key);
     }
   };
 
@@ -147,12 +164,12 @@ export function GraveyardMap({ packages, selected, resurrected, onSelect }: Prop
 
         {stones.map((s) => (
           <Tombstone
-            key={`${s.pkg.name}@${s.pkg.version}`}
+            key={pkgKey(s.pkg)}
             stone={s}
-            selected={selected === s.pkg.name}
-            risen={resurrected.has(s.pkg.name)}
-            onSelect={() => onSelect(s.pkg.name)}
-            onKey={onKey(s.pkg.name)}
+            selected={selected === pkgKey(s.pkg)}
+            risen={resurrected.has(pkgKey(s.pkg))}
+            onSelect={() => onSelect(pkgKey(s.pkg))}
+            onKey={onKey(pkgKey(s.pkg))}
             onHover={(e) => showTip(s.pkg, e)}
             onLeave={() => setTip(null)}
           />
@@ -193,7 +210,36 @@ export function GraveyardMap({ packages, selected, resurrected, onSelect }: Prop
           {tip.pkg.signals.advisories.length > 0 && (
             <span className="map__tip-flaw">{plural(tip.pkg.signals.advisories.length, 'known flaw')}</span>
           )}
-          {resurrected.has(tip.pkg.name) && <span className="map__tip-risen">Resurrected</span>}
+          {resurrected.has(pkgKey(tip.pkg)) && <span className="map__tip-risen">Resurrected</span>}
+        </div>
+      )}
+
+      {width === 'narrow' && listed.length > 0 && (
+        <div className="map__list">
+          <p className="map__list-title">Zombies, highest risk first</p>
+          <ul>
+            {listed.map((p) => {
+              const key = pkgKey(p);
+              return (
+                <li key={key}>
+                  <button
+                    type="button"
+                    className={`map__list-item${selected === key ? ' is-selected' : ''}`}
+                    aria-pressed={selected === key}
+                    onClick={() => onSelect(key)}
+                  >
+                    <i className={`dot dot--${riskBand(p.score.risk)}`} aria-hidden="true" />
+                    <span className="map__list-name mono">{p.name}</span>
+                    <span className="muted small">
+                      {p.version} · {p.direct ? 'direct' : 'transitive'} · risk {Math.round(p.score.risk)}
+                    </span>
+                    {p.signals.advisories.length > 0 && <i className="dot dot--flaw" aria-label="known flaw" />}
+                    {resurrected.has(key) && <span className="map__tip-risen">Risen</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

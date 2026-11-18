@@ -28,16 +28,14 @@ The rule is covered by a property test in `test/score.test.ts`.
 
 ## Reproduce
 
+Download the two files into a scratch folder of their own (not the Graveyard Shift folder, whose own package.json they would overwrite), then point the CLI at it from the Graveyard Shift folder:
+
 ```bash
-curl -sfLO https://raw.githubusercontent.com/mozilla/pdf.js/HEAD/package-lock.json
+mkdir -p /tmp/pdfjs && curl -sfL https://raw.githubusercontent.com/mozilla/pdf.js/HEAD/package-lock.json -o /tmp/pdfjs/package-lock.json && curl -sfL https://raw.githubusercontent.com/mozilla/pdf.js/HEAD/package.json -o /tmp/pdfjs/package.json
 ```
 
 ```bash
-curl -sfLO https://raw.githubusercontent.com/mozilla/pdf.js/HEAD/package.json
+node bin/graveyard.mjs scan /tmp/pdfjs
 ```
 
-```bash
-node bin/graveyard.mjs scan .
-```
-
-Or paste both files into **Paste lockfile** in the UI. Numbers drift as the projects and the registry change.
+The folder has no source files, so this matches the paste-lockfile mode used for the table. Or paste both files into **Paste lockfile** in the UI. Numbers drift as the projects and the registry change.

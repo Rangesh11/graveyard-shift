@@ -95,7 +95,7 @@ The Surgeon never edits your working tree. It copies the project into `.graveyar
 
 1. The original package code comes from your `node_modules` (version-checked) or from the registry tarball, which is hash-checked against the lockfile `integrity`.
 2. Each recipe lists candidate replacements, simplest first. For each one, [fast-check](https://fast-check.dev) generates inputs within the documented API and runs them through both the old and the new code. Outputs must be deep-equal, or both must throw the same error type.
-3. The proof runs in a child process under Node's permission model (`--permission`). It can only read the files it needs, cannot write files or start processes, and gets an empty environment, so package code never sees your secrets. `test/prover.test.ts` checks this.
+3. The proof runs in a child process under Node's permission model (`--permission`). It can only read the files it needs, cannot write files, start processes or load native addons, and gets an empty environment, so package code never sees your environment secrets. `test/prover.test.ts` checks this. The replay test runs under the same read-only sandbox. Two limits: Node 24's permission model does not block network access, and the project's own `npm test` runs normally (with `PATH` and `HOME` only), because it is your test suite.
 4. A rejected candidate keeps its minimal counterexample, and both the PR and the UI show it.
 5. The passing proof records 40–160 cases into `graveyard/proofs/<pkg>.golden.json`, plus a `node:test` file that replays them. The behaviour stays guarded after the original package is gone.
 6. The project's own `npm test` runs on the branch, and the PR reports the result.
@@ -111,9 +111,11 @@ The Surgeon never edits your working tree. It copies the project into `.graveyar
 | Custom agents | Coroner (read-only, picks the route), Surgeon (makes the fix), Warden (watches afterwards) | `.kiro/agents/` |
 | Powers | MCP server, steering and usage guide packed as an installable Power | `power/graveyard-shift/` |
 | Property-based testing | The product's proof engine, and the tests for the scanner itself (score monotonicity, lockfile resolution, codec round-trip) | `src/resurrect/`, `test/` |
-| Headless CLI | Surgeon in a GitHub Action via `kiro-cli chat --no-interactive` | `.github/workflows/surgeon.yml` |
+| Headless CLI | Surgeon in a GitHub Action via `kiro-cli chat --no-interactive` (written, not yet run: needs a `KIRO_API_KEY` secret) | `.github/workflows/surgeon.yml` |
 
-The property tests found two real bugs during the build. Both are documented in `.kiro/specs/bugfix-symlinked-tmpdir/`.
+Tests found three real bugs during the build, one of them by a score property test. All three are documented in `.kiro/specs/bugfix-symlinked-tmpdir/bugfix.md`. A later independent audit found more, which are fixed and covered by `test/hardening.test.ts`.
+
+How it was built: the code in this first version was written with an AI coding assistant (Claude Code) alongside the Kiro specs, steering and hooks in `.kiro/`. Work from here on happens in Kiro, so the hooks and agents run for real.
 
 ## Project layout
 
@@ -137,7 +139,8 @@ Live at https://rangesh11.github.io/graveyard-shift/, deployed by `.github/workf
 - npm only. The Adopt route is diagnosed and escalated but not automated.
 - Equivalence is proven on generated inputs within each package's documented API, not for every possible value. Each PR's risk note says what is covered.
 - Six replacement recipes ship today (`left-pad`, `trim`, `object-assign`, `xtend`, `arr-flatten`, `repeat-string`). Any small, permissively licensed package with no runtime dependencies can take the Inline route.
-- The keeper runs as a CLI patrol on a schedule (`.github/workflows/warden.yml`) with a memory file. A Kiro Crew app with one bot per package is planned.
+- The keeper runs as a CLI patrol on a schedule (`.github/workflows/warden.yml`). Each fix PR adds its keeper to the committed `graveyard/warden.json`; when a patrol decides something, the workflow saves the memory and any patch draft through a pull request, so decisions persist and are never repeated. A Kiro Crew app with one bot per package is planned.
+- Not supported yet: imports under an npm alias (escalated), and packages that are only used through executables, config files or types (escalated, never removed).
 - Simulated advisories exist only for the demo and are labelled SIMULATED everywhere they appear.
 
 ## Compared with what exists

@@ -26,6 +26,8 @@ export interface ParsedLockfile {
   name: string;
   lockfileVersion: number;
   packages: LockedPackage[];
+  /** Entries with an invalid name or version, left out of the scan. */
+  skipped: string[];
 }
 
 export class LockfileError extends Error {}
@@ -48,11 +50,23 @@ export function resolveFrom(fromKey: string, dep: string, exists: (key: string) 
   }
 }
 
+/** npm package names (legacy capitals allowed) and exact semver versions. */
+export const NAME_RE = /^(?:@[a-zA-Z0-9][\w.~-]*\/)?[a-zA-Z0-9~][\w.~-]*$/;
+export const VERSION_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+/** "npm:real-name@1.2.3", the version field of an aliased install in a v1 lockfile. */
+function parseAliasVersion(v: string): { name: string; version: string } | undefined {
+  const m = v.match(/^npm:((?:@[^/@]+\/)?[^@]+)@(.+)$/);
+  return m ? { name: m[1], version: m[2] } : undefined;
+}
+
 function v1ToPackages(deps: Record<string, V1Entry>, prefix: string, out: Record<string, LockEntry>) {
   for (const [name, entry] of Object.entries(deps)) {
     const key = `${prefix}node_modules/${name}`;
+    const alias = parseAliasVersion(entry.version ?? '');
     out[key] = {
-      version: entry.version,
+      ...(alias ? { name: alias.name } : {}),
+      version: alias ? alias.version : entry.version,
       resolved: entry.resolved,
       integrity: entry.integrity,
       dev: entry.dev,
@@ -100,19 +114,32 @@ export function parseLockfile(lockText: string, packageJsonText?: string): Parse
   const root: LockEntry = { ...(entries[''] ?? {}), ...pkgJson };
   const directProd = new Set(Object.keys({ ...root.dependencies, ...root.optionalDependencies, ...root.peerDependencies }));
   const directDev = new Set(Object.keys(root.devDependencies ?? {}));
+  // npm workspaces: their own dependencies count as chosen by the project.
+  for (const [key, e] of Object.entries(entries)) {
+    if (key === '' || key.includes('node_modules/') || e.link) continue;
+    for (const dep of Object.keys({ ...e.dependencies, ...e.optionalDependencies, ...e.peerDependencies })) directProd.add(dep);
+    for (const dep of Object.keys(e.devDependencies ?? {})) directDev.add(dep);
+  }
 
   const keys = Object.keys(entries).filter((k) => k.includes('node_modules/') && !entries[k].link);
   const keySet = new Set(keys);
   const byId = new Map<string, LockedPackage>();
   const idOfKey = new Map<string, string>();
+  const skipped: string[] = [];
 
   for (const key of keys) {
     const e = entries[key];
-    const name = e.name ?? nameFromPath(key);
+    const installedAs = nameFromPath(key);
+    const name = e.name ?? installedAs;
     const version = e.version ?? '0.0.0';
+    // Names and versions end up in file paths and generated code: skip anything odd.
+    if (!NAME_RE.test(name) || !NAME_RE.test(installedAs) || !VERSION_RE.test(version)) {
+      skipped.push(key);
+      continue;
+    }
     const id = `${name}@${version}`;
     idOfKey.set(key, id);
-    const topLevel = key === `node_modules/${nameFromPath(key)}`;
+    const topLevel = key === `node_modules/${installedAs}`;
     let pkg = byId.get(id);
     if (!pkg) {
       pkg = {
@@ -125,23 +152,27 @@ export function parseLockfile(lockText: string, packageJsonText?: string): Parse
         resolved: e.resolved,
         dependents: [],
         dependencies: Object.keys({ ...e.dependencies, ...e.optionalDependencies }),
+        ...(installedAs !== name ? { alias: installedAs } : {}),
       };
       byId.set(id, pkg);
     } else if (!e.dev) {
       pkg.dev = false;
     }
     pkg.paths.push(key);
-    if (topLevel && (directProd.has(name) || directDev.has(name))) pkg.direct = true;
+    // Direct-ness follows the name the project installed it under (an alias, if any).
+    if (topLevel && (directProd.has(installedAs) || directDev.has(installedAs))) pkg.direct = true;
   }
 
   for (const key of keys) {
     const e = entries[key];
-    const fromId = idOfKey.get(key)!;
+    const fromId = idOfKey.get(key);
+    if (!fromId) continue;
     const fromName = byId.get(fromId)!.name;
     for (const dep of Object.keys({ ...e.dependencies, ...e.optionalDependencies })) {
       const target = resolveFrom(key, dep, (k) => keySet.has(k));
-      if (!target) continue;
-      const pkg = byId.get(idOfKey.get(target)!)!;
+      const targetId = target && idOfKey.get(target);
+      if (!targetId) continue;
+      const pkg = byId.get(targetId)!;
       if (!pkg.dependents.includes(fromName)) pkg.dependents.push(fromName);
     }
   }
@@ -149,6 +180,7 @@ export function parseLockfile(lockText: string, packageJsonText?: string): Parse
   return {
     name: String(root.name ?? lock.name ?? 'project'),
     lockfileVersion,
+    skipped,
     packages: [...byId.values()].sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version)),
   };
 }

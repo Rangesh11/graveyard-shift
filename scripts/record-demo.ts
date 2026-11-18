@@ -7,7 +7,9 @@
 // Run with: npm run demo:record. Set GITHUB_TOKEN so repo checks are not rate limited.
 import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { CACHE_DIR, FIXTURE_CACHE_DIR, TOOL_ROOT } from '../src/core/cache.ts';
+import { existsSync } from 'node:fs';
+import { CACHE_DIR, FIXTURE_CACHE_DIR, keyFile, TOOL_ROOT } from '../src/core/cache.ts';
+import { parseGitHubRepo } from '../src/core/github.ts';
 import { scanProjectDir } from '../src/core/scanner.ts';
 import type { ProgressEvent } from '../src/core/types.ts';
 import { diagnose } from '../src/resurrect/coroner.ts';
@@ -52,8 +54,23 @@ console.log(`patrol: ${patrolled.events.length} events, ${patrolled.drafts.lengt
 // Leave the example clean for live runs.
 await rm(path.join(ROOT, '.graveyard'), { recursive: true, force: true });
 
+// Ship only the lookups the example needs, not everything in the local cache.
 await rm(FIXTURE_CACHE_DIR, { recursive: true, force: true });
-for (const ns of ['registry', 'osv-pkg', 'osv-vuln', 'github']) {
-  await cp(path.join(CACHE_DIR, ns), path.join(FIXTURE_CACHE_DIR, ns), { recursive: true }).catch(() => {});
+const wanted: Array<[string, string]> = [];
+for (const p of report.packages) {
+  wanted.push(['registry', p.name], ['osv-pkg', `${p.name}@${p.version}`]);
+  for (const a of p.signals.advisories) wanted.push(['osv-vuln', a.id]);
+  const repo = parseGitHubRepo(p.facts?.repositoryUrl);
+  if (repo) wanted.push(['github', `${repo.owner}/${repo.repo}`.toLowerCase()]);
 }
+let copied = 0;
+for (const [ns, key] of wanted) {
+  const from = keyFile(CACHE_DIR, ns, key);
+  if (!existsSync(from)) continue;
+  const to = keyFile(FIXTURE_CACHE_DIR, ns, key);
+  await mkdir(path.dirname(to), { recursive: true });
+  await cp(from, to);
+  copied++;
+}
+console.log(`offline cache: ${copied} entries`);
 console.log(`demo snapshots → ${path.relative(TOOL_ROOT, OUT)}, offline cache → ${path.relative(TOOL_ROOT, FIXTURE_CACHE_DIR)}`);

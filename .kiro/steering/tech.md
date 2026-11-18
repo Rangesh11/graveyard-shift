@@ -4,7 +4,7 @@ inclusion: always
 
 # Tech
 
-- **Runtime:** Node.js 22+ (developed on 24). ESM TypeScript run directly with `tsx`; there is no compile step for the backend.
+- **Runtime:** Node.js 22.13+ (needed for the `--permission` flag; developed on 24). ESM TypeScript run directly with `tsx`; there is no compile step for the backend.
 - **Language:** TypeScript (strict), imports use explicit `.ts` extensions. Two plain-JS files run outside tsx on purpose: `src/resurrect/proof-runner.mjs` (sandboxed child process) and `src/resurrect/codec.cjs` (also inlined into generated proof tests).
 - **Property-based testing:** fast-check, both for the product's proofs and for this repo's own tests.
 - **Tests:** vitest (`vitest.config.ts` sets `GRAVEYARD_OFFLINE=1` so tests read `fixtures/cache` and never use the network).

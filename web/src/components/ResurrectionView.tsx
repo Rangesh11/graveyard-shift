@@ -151,14 +151,14 @@ export function ResurrectionView({ name, run, onRetry, onClose, onKeepers }: Pro
           {result?.status === 'escalated' && (
             <div className="notice notice--warn">
               <h3>Handed to a human</h3>
-              <p>{result.escalation ?? 'The crew could not prove a safe fix, so a human needs to look.'}</p>
+              {result.escalation ? <Markdown source={result.escalation} /> : <p>The crew could not prove a safe fix, so a human needs to look.</p>}
             </div>
           )}
 
           {result?.status === 'failed' && !result.pr && (
             <div className="notice notice--error">
               <h3>No fix passed the proof</h3>
-              <p>{result.escalation ?? 'Every candidate fix disagreed with the old code, so nothing was opened.'}</p>
+              {result.escalation ? <Markdown source={result.escalation} /> : <p>Every candidate fix disagreed with the old code, so nothing was opened.</p>}
               <button type="button" className="btn btn--ghost btn--small" onClick={onRetry}>
                 Run again
               </button>

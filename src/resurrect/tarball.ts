@@ -17,6 +17,8 @@ export interface OriginalPackage {
   integrity?: string;
   license?: string;
   main: string;
+  /** Executable names from the package's "bin" field. */
+  bins: string[];
 }
 
 /** Checks a Subresource Integrity string (sha512-... or sha1-...) against bytes. */
@@ -40,6 +42,7 @@ async function describe(given: string, source: OriginalPackage['source'], extra:
     source,
     license: typeof pkg.license === 'string' ? pkg.license : pkg.license?.type,
     main: path.relative(dir, entry).split(path.sep).join('/'),
+    bins: typeof pkg.bin === 'string' ? [String(pkg.name).split('/').pop()!] : Object.keys(pkg.bin ?? {}),
     ...extra,
   };
 }
@@ -60,7 +63,10 @@ export async function locateOriginal(
     if (pkg.version === version) return describe(installed, 'node_modules', { integrity: lock.integrity, tarball: lock.resolved });
   }
 
-  const dir = path.join(CACHE_DIR, 'tarballs', `${name.replace('/', '+')}@${version}`);
+  const tarballs = path.resolve(CACHE_DIR, 'tarballs');
+  const dir = path.resolve(tarballs, `${name.replace('/', '+')}@${version}`);
+  // Names and versions come from a lockfile; never let one point outside the cache.
+  if (path.dirname(dir) !== tarballs) throw new Error(`Refusing unsafe package name or version: ${name}@${version}`);
   if (existsSync(path.join(dir, 'package.json'))) {
     return describe(dir, 'registry-tarball', { integrity: lock.integrity, tarball: lock.resolved });
   }
@@ -73,7 +79,10 @@ export async function locateOriginal(
   const res = await fetch(tarball, { signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error(`Download failed (${res.status}) for ${tarball}`);
   const bytes = Buffer.from(await res.arrayBuffer());
-  if (integrity && !verifyIntegrity(bytes, integrity)) {
+  if (!integrity) {
+    throw new Error(`No integrity hash for ${name}@${version}; refusing to run code that cannot be verified.`);
+  }
+  if (!verifyIntegrity(bytes, integrity)) {
     throw new Error(`Integrity check failed for ${name}@${version}: the tarball does not match ${integrity.slice(0, 20)}…`);
   }
   await rm(dir, { recursive: true, force: true });

@@ -38,6 +38,8 @@ Transitive zombies are not fixed directly: the Coroner names the direct dependen
 
 ## Planned, not built
 
-- A Kiro Crew app and Kiro bots as the keeper runtime. Today the Warden runs from the CLI (`graveyard warden patrol`), the API, or a scheduled job.
+- A Kiro Crew app and Kiro bots as the keeper runtime. Today the Warden runs from the CLI (`graveyard warden patrol`), the API, or the scheduled `.github/workflows/warden.yml`, which saves its memory in `graveyard/warden.json` through a pull request.
+- Network isolation for the proof sandbox: Node 24's permission model limits files, processes and workers, not network.
+
+Built since the first draft: `graveyard resurrect <pkg> --open-pr` opens a real GitHub pull request (`src/resurrect/publish.ts`), used for Rangesh11/haunted-app#1 and #2.
 - Automated Adopt route (fork, patch, publish).
-- Opening real GitHub pull requests; today the Surgeon writes the PR body and a `git format-patch` file to `.graveyard/prs/`.

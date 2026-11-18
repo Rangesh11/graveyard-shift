@@ -9,7 +9,7 @@
   - `src/core/imports.ts`: `findSpecifiers`, `packageNameOf`, `listSourceFiles`, `scanUsage`
   - Tests: `test/imports.test.ts` (offset property)
 - [x] 4. Disk cache with TTLs, offline mode and shipped fixtures
-  - `src/core/cache.ts`: `cached`, `fetchJson`, `mapLimit`, `snapshotToFixture`
+  - `src/core/cache.ts`: `cached`, `peek`, `store`, `fetchJson`, `mapLimit` (the offline snapshot is copied into `fixtures/cache/` by `scripts/record-demo.ts`)
   - `fixtures/cache/` recorded by `scripts/record-demo.ts`
 - [x] 5. npm registry client
   - `src/core/registry.ts`: `getPackageDoc`, `trimDoc`, `factsFor`
@@ -19,7 +19,7 @@
   - `src/core/github.ts`: `parseGitHubRepo`, `repoStatus`
 - [x] 8. Pure scoring
   - `src/core/score.ts`: `deadness`, `statusOf`, `scorePackage`, `daysBetween`
-  - Tests: `test/score.test.ts` (6 properties)
+  - Tests: `test/score.test.ts` (7 properties)
 - [x] 9. Scanner orchestration and ranking
   - `src/core/scanner.ts`: `scan`, `scanProjectDir`
 - [x] 10. Expose the scan
@@ -27,4 +27,5 @@
 - [x] 11. Graveyard map in the web UI (`web/src/components/GraveyardMap.tsx`)
 - [x] 12. Scan three real public repositories and publish the zombie counts in the write-up (`docs/REAL-WORLD.md`)
 - [x] 12a. Treat a deprecated old version of a living package as an upgrade, not a zombie: false positive found by the pdf.js scan (`glob@10/11`). `Signals.versionDeprecated` in `src/core/scanner.ts`, property test in `test/score.test.ts`
+- [x] 12b. npm aliases (`"pad": "npm:left-pad@1.3.0"`) and workspace dependencies are parsed correctly; invalid names/versions are skipped with a warning
 - [ ] 13. Second ecosystem (planned, not started)

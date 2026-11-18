@@ -817,6 +817,60 @@ code {
   box-shadow: 0 0 6px var(--green);
 }
 
+/* Readable list of zombies under the map on phone-width screens. */
+.map__list {
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  padding: 10px 12px 4px;
+}
+
+.map__list-title {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.map__list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.map__list-item {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.map__list-item:hover,
+.map__list-item:focus-visible {
+  background: var(--panel-2);
+}
+
+.map__list-item.is-selected {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+
+.map__list-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Detail panel ---------- */
 
 .detail {

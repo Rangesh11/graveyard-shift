@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { appendFile, cp, mkdir, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, readdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { findSpecifiers, listSourceFiles } from '../core/imports.ts';
 import { git } from './git.ts';
@@ -41,7 +41,11 @@ export interface RewriteResult {
 /** Points every import of `pkg` at `targetRel` (a path from the project root). */
 export async function rewriteImports(ws: string, pkg: string, targetRel: string): Promise<RewriteResult> {
   const result: RewriteResult = { files: [], sites: 0, unsupported: [] };
+  const wsReal = await realpath(ws);
   for (const file of await listSourceFiles(ws)) {
+    // Never write through a path that resolves outside the scratch copy.
+    const real = await realpath(file);
+    if (real !== wsReal && !real.startsWith(wsReal + path.sep)) continue;
     const code = await readFile(file, 'utf8');
     const hits = findSpecifiers(code).filter((h) => h.spec === pkg || h.spec.startsWith(`${pkg}/`));
     if (!hits.length) continue;
@@ -60,6 +64,32 @@ export async function rewriteImports(ws: string, pkg: string, targetRel: string)
     result.sites += hits.length;
   }
   return result;
+}
+
+/**
+ * Places that still load the package after the rewrite: any source file in the
+ * copy (build output and tool folders included), plus package.json scripts that
+ * call one of its executables. Any hit means the dependency cannot be removed.
+ */
+export async function findRemainingUses(ws: string, pkg: string, binNames: string[]): Promise<string[]> {
+  const left: string[] = [];
+  for (const file of await listSourceFiles(ws, { everywhere: true })) {
+    const rel = toPosix(path.relative(ws, file));
+    if (rel.startsWith('graveyard/')) continue;
+    const code = await readFile(file, 'utf8');
+    for (const h of findSpecifiers(code)) {
+      if (h.spec === pkg || h.spec.startsWith(`${pkg}/`)) left.push(`${rel}:${h.line} still loads "${h.spec}"`);
+    }
+  }
+  const pj = JSON.parse(await readFile(path.join(ws, 'package.json'), 'utf8'));
+  for (const [script, cmd] of Object.entries<string>(pj.scripts ?? {})) {
+    for (const bin of binNames) {
+      if (new RegExp(`(^|[\\s;&|(])${bin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[\\s;&|)])`).test(cmd)) {
+        left.push(`package.json script "${script}" runs its executable "${bin}"`);
+      }
+    }
+  }
+  return left;
 }
 
 function detectIndent(text: string): string {
@@ -205,7 +235,7 @@ function run(fn) {
 }
 
 recorded.groups.forEach((group, i) => {
-  test(\`${pkg}: \${group.property}\`, () => {
+  test(${JSON.stringify(`${pkg}: `)} + group.property, () => {
     for (const c of group.cases) {
       const args = decode(c.args);
       const got = run(() => calls[i](subject, args));

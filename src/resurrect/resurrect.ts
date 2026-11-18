@@ -1,4 +1,4 @@
-import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { scanProjectDir } from '../core/scanner.ts';
@@ -12,13 +12,14 @@ import type {
   ScanReport,
   Stage,
 } from '../core/types.ts';
-import { adopt } from '../warden/memory.ts';
+import { adopt, adoptCommitted } from '../warden/memory.ts';
 import { diagnose } from './coroner.ts';
 import { git, run } from './git.ts';
 import { prTitle, renderPrBody } from './pr.ts';
 import { prove, type GoldenGroup } from './prover.ts';
 import { findRecipe, inlineProperties } from './recipes.ts';
 import {
+  findRemainingUses,
   linkNodeModules,
   prepareWorkspace,
   removeDependency,
@@ -83,7 +84,7 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
 
   // 2. Surgeon: find the exact original code, then work on a scratch branch.
   const original = await locateOriginal(root, pkg.name, pkg.version, pkg);
-  emit('surgeon', `Found the original code (${original.source === 'node_modules' ? 'installed copy' : 'registry tarball, hash checked'})`, {
+  emit('surgeon', `Found the original code (${original.source === 'node_modules' ? 'installed copy' : 'registry tarball, integrity verified'})`, {
     entry: original.main,
   });
   const branch = `graveyard/${diagnosis.route}-${safeName(pkg.name)}`;
@@ -93,6 +94,7 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
   const attempts: AttemptRecord[] = [];
   let golden: GoldenGroup[] = [];
   let subjectRel = '';
+  let vendoredLicense: string | undefined;
   const changes: string[] = [];
 
   if (diagnosis.route === 'replace') {
@@ -133,9 +135,12 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
     );
     emit('surgeon', `Inlined ${vendored.files.length} files into ${vendored.dirRel}/ with licence and provenance`, { files: vendored.files });
     emit('prover', 'Proving the inlined copy behaves like the installed package…');
+    vendoredLicense = vendored.licenseFile;
     const out = await prove({
       oldPath: original.entry,
       newPath: path.join(ws, subjectRel),
+      // The entry may sit in a subfolder and require files above it.
+      readDirs: [path.join(ws, vendored.dirRel)],
       properties: inlineProperties(),
       candidate: 'inline-copy',
       numRuns: opts.numRuns,
@@ -160,13 +165,22 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
     emit('done', 'Sub-path imports found. Escalated.', { escalation });
     return { ...base, status: 'escalated', attempts, escalation, finishedAt: new Date().toISOString() };
   }
+  const remaining = await findRemainingUses(ws, pkg.name, original.bins);
+  if (remaining.length) {
+    const escalation = `${escalationReport(pkg, diagnosis)}\n\nThe project still uses the package in ways the Surgeon cannot redirect, so removing it would break them:\n${remaining.map((u) => `- ${u}`).join('\n')}`;
+    emit('done', 'The package is still used outside rewritable imports. Escalated.', { escalation });
+    return { ...base, status: 'escalated', attempts, escalation, finishedAt: new Date().toISOString() };
+  }
   const stillNeededBy = pkg.dependents;
   await removeDependency(ws, pkg.name, stillNeededBy);
   emit('surgeon', `Rewrote ${rewrite.sites} imports in ${rewrite.files.length} files and removed the dependency`, rewrite);
 
   const codec = await readFile(CODEC_PATH, 'utf8');
   const proofTest = await writeProofTest(ws, pkg.name, pkg.version, subjectRel, golden, codec);
-  const replay = await run(process.execPath, ['--test', proofTest.testRel], ws);
+  // The replay runs the new code, which for the inline route is the dead
+  // package's own code, so it gets the same read-only sandbox as the proof.
+  const wsReal = await realpath(ws);
+  const replay = await run(process.execPath, ['--permission', `--allow-fs-read=${wsReal}`, '--test-isolation=none', '--test', proofTest.testRel], ws);
   emit('prover', `Replay test with ${proofTest.cases} recorded cases: ${replay.ok ? 'pass' : 'FAIL'}`, { file: proofTest.testRel });
 
   let projectTests: { ok: boolean; command: string; tail: string } | undefined;
@@ -177,6 +191,21 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
     projectTests = { ok: res.ok, command: 'npm test', tail: res.output.trim().split('\n').slice(-12).join('\n') };
     emit('prover', `Project tests (npm test): ${res.ok ? 'pass' : 'FAIL'}${linked ? '' : ' (no node_modules to link)'}`);
   }
+
+  // The keeper ships inside the PR: merging the fix deploys its Warden.
+  const keeperRecord = {
+    package: pkg.name,
+    version: pkg.version,
+    route: diagnosis.route,
+    adoptedAt: new Date().toISOString(),
+    branch,
+    lastKnownUpstream: pkg.facts?.latest,
+    seenAdvisories: pkg.signals.advisories.map((a) => a.id),
+  };
+  const keeperSummary =
+    `Proven ${diagnosis.route} fix drafted on ${branch} (${final.proof.totalRuns} inputs, candidate "${final.candidate}"). ` +
+    (pkg.signals.advisories.length ? `Advisories resolved by removal: ${pkg.signals.advisories.map((a) => a.id).join(', ')}.` : 'No open advisories.');
+  await adoptCommitted(ws, keeperRecord, keeperSummary);
 
   // 4. Commit and draft the pull request.
   await git(ws, ['add', '-A']);
@@ -221,6 +250,7 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
     originalSource: original.source,
     integrity: original.integrity,
     license: original.license ?? pkg.facts?.license,
+    licenseFile: vendoredLicense,
     removedFromLockfile: stillNeededBy.length === 0,
     stillNeededBy,
     riskNotes,
@@ -246,20 +276,7 @@ export async function resurrect(root: string, name: string, opts: ResurrectOptio
   emit('pr', `Pull request drafted on ${branch} (${files.length} files)`, { title: pr.title, branch, files });
 
   // 5. Hand over to the Warden.
-  await adopt(
-    root,
-    {
-      package: pkg.name,
-      version: pkg.version,
-      route: diagnosis.route,
-      adoptedAt: new Date().toISOString(),
-      branch,
-      lastKnownUpstream: pkg.facts?.latest,
-      seenAdvisories: pkg.signals.advisories.map((a) => a.id),
-    },
-    `Proven ${diagnosis.route} fix drafted on ${branch} (${final.proof.totalRuns} inputs, candidate "${final.candidate}"). ` +
-      (pkg.signals.advisories.length ? `Advisories resolved by removal: ${pkg.signals.advisories.map((a) => a.id).join(', ')}.` : 'No open advisories.'),
-  );
+  await adopt(root, keeperRecord, keeperSummary);
   emit('warden', `A Warden keeper now watches ${pkg.name}`);
 
   const result: ResurrectionResult = { ...base, status: 'proven', attempts, pr, finishedAt: new Date().toISOString() };

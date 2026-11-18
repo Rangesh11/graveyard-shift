@@ -6,6 +6,10 @@ import { ago, plural, riskBand, ROUTE_HINT, ROUTE_LABEL, shortDate, STATUS_LABEL
 interface Props {
   pkg: ScannedPackage | null;
   zombieCount: number;
+  /** The report came from a pasted lockfile: fixes need a local project, so none are offered here. */
+  scanOnly: boolean;
+  /** Source files were scanned for imports (false for a pasted lockfile). */
+  usageScanned: boolean;
   resurrected: boolean;
   running: boolean;
   hasRun: boolean;
@@ -20,13 +24,14 @@ type DiagState =
   | { state: 'ready'; diagnosis: Diagnosis | null }
   | { state: 'error'; message: string };
 
-export function DetailPanel({ pkg, zombieCount, resurrected, running, hasRun, onResurrect, onShowRun, onSelect }: Props) {
+export function DetailPanel({ pkg, zombieCount, scanOnly, usageScanned, resurrected, running, hasRun, onResurrect, onShowRun, onSelect }: Props) {
   const [diag, setDiag] = useState<DiagState>({ state: 'idle' });
   const [attempt, setAttempt] = useState(0);
   const name = pkg?.name;
 
   useEffect(() => {
-    if (!name || !pkg?.score.zombie) {
+    // A pasted lockfile is not the project the server can diagnose, so never ask it.
+    if (!name || !pkg?.score.zombie || scanOnly) {
       setDiag({ state: 'idle' });
       return;
     }
@@ -38,7 +43,7 @@ export function DetailPanel({ pkg, zombieCount, resurrected, running, hasRun, on
     return () => {
       live = false;
     };
-  }, [name, pkg?.score.zombie, attempt]);
+  }, [name, pkg?.score.zombie, attempt, scanOnly]);
 
   if (!pkg) {
     return (
@@ -136,9 +141,11 @@ export function DetailPanel({ pkg, zombieCount, resurrected, running, hasRun, on
           )}
           <dt>Used by</dt>
           <dd>
-            {s.usageSites > 0
-              ? `${plural(s.usageSites, 'import site')} in ${plural(s.usageFiles, 'file')}`
-              : 'No direct imports found'}
+            {!usageScanned
+              ? 'Not scanned (lockfile only)'
+              : s.usageSites > 0
+                ? `${plural(s.usageSites, 'import site')} in ${plural(s.usageFiles, 'file')}`
+                : 'No direct imports found'}
             {s.dependents > 0 && <span className="muted"> · {plural(s.dependents, 'dependent package')}</span>}
           </dd>
         </dl>
@@ -186,6 +193,16 @@ export function DetailPanel({ pkg, zombieCount, resurrected, running, hasRun, on
       {pkg.score.zombie && (
         <section className="detail__section coroner">
           <h3>Coroner's verdict</h3>
+          {scanOnly && (
+            <div className="notice notice--warn">
+              <p>
+                Scan-only: this report came from a pasted lockfile. Fixes run on a local project, with its source:
+              </p>
+              <p>
+                <code>graveyard resurrect {pkg.name} --dir &lt;your project&gt;</code>
+              </p>
+            </div>
+          )}
           {diag.state === 'loading' && <p className="muted pulse">The Coroner is examining the body…</p>}
           {diag.state === 'error' && (
             <div className="notice notice--error">
@@ -198,7 +215,14 @@ export function DetailPanel({ pkg, zombieCount, resurrected, running, hasRun, on
           {diag.state === 'ready' && !diag.diagnosis && (
             <p className="muted">No verdict was recorded for this package in the demo.</p>
           )}
-          {diag.state === 'ready' && diag.diagnosis && (
+          {diag.state === 'ready' && diag.diagnosis && diag.diagnosis.version !== pkg.version && (
+            <p className="notice notice--warn">
+              The Coroner examined {pkg.name}@{diag.diagnosis.version}. This copy ({pkg.version}){' '}
+              {pkg.direct ? 'is another version' : 'is pulled in by another package'}, so fix it through the version
+              the project uses directly.
+            </p>
+          )}
+          {diag.state === 'ready' && diag.diagnosis && diag.diagnosis.version === pkg.version && (
             <Verdict
               diagnosis={diag.diagnosis}
               resurrected={resurrected}

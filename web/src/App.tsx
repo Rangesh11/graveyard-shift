@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ScanReport } from './types';
+import { pkgKey } from './format';
 import type { Mode } from './api';
 import { detectMode, reset, resurrect, scanExample, scanLockfile } from './api';
 import { GraveyardMap } from './components/GraveyardMap';
@@ -16,7 +17,7 @@ type Scan =
   | { state: 'idle' }
   | { state: 'loading' }
   | { state: 'error'; message: string; retry: () => Promise<void> }
-  | { state: 'ready'; report: ScanReport };
+  | { state: 'ready'; report: ScanReport; source: 'example' | 'paste' };
 
 export function App() {
   const [mode, setMode] = useState<Mode | null>(null);
@@ -27,6 +28,7 @@ export function App() {
   const [activeRun, setActiveRun] = useState<string | null>(null);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [keeperKey, setKeeperKey] = useState(0);
+  const [resetError, setResetError] = useState<string | null>(null);
   const cancels = useRef<Record<string, () => void>>({});
   const runRef = useRef<HTMLDivElement>(null);
 
@@ -41,16 +43,16 @@ export function App() {
     setActiveRun(null);
   };
 
-  const runScan = useCallback((load: () => Promise<ScanReport>) => {
+  const runScan = useCallback((load: () => Promise<ScanReport>, source: 'example' | 'paste') => {
     const go = (): Promise<void> => {
       setScan({ state: 'loading' });
       setSelected(null);
       clearRuns();
       return load().then(
         (report) => {
-          setScan({ state: 'ready', report });
+          setScan({ state: 'ready', report, source });
           const top = report.packages.find((p) => p.score.zombie && p.direct) ?? report.packages.find((p) => p.score.zombie);
-          setSelected(top?.name ?? null);
+          setSelected(top ? pkgKey(top) : null);
         },
         (err: unknown) => {
           setScan({ state: 'error', message: err instanceof Error ? err.message : String(err), retry: go });
@@ -63,13 +65,13 @@ export function App() {
 
   const scanExampleProject = () => {
     setTab('graveyard');
-    runScan(scanExample).catch(() => {});
+    runScan(scanExample, 'example').catch(() => {});
   };
 
   const scanPasted = (lockfile: string, packageJson?: string) => {
     setTab('graveyard');
     // Validate on the server first so a bad lockfile keeps the modal open.
-    return scanLockfile(lockfile, packageJson).then((report) => runScan(() => Promise.resolve(report)));
+    return scanLockfile(lockfile, packageJson).then((report) => runScan(() => Promise.resolve(report), 'paste'));
   };
 
   const startResurrect = (name: string) => {
@@ -92,26 +94,44 @@ export function App() {
     });
   };
 
+  const anyRunning = Object.values(runs).some((r) => r.status === 'running');
   const doReset = async () => {
+    setResetError(null);
     try {
       await reset();
-    } finally {
-      clearRuns();
-      setScan({ state: 'idle' });
-      setSelected(null);
-      setKeeperKey((k) => k + 1);
+    } catch (err) {
+      // The server refused (for example while a resurrection runs): keep the page as it is.
+      setResetError(err instanceof Error ? err.message : String(err));
+      return;
     }
+    clearRuns();
+    setScan({ state: 'idle' });
+    setSelected(null);
+    setKeeperKey((k) => k + 1);
   };
 
   const report = scan.state === 'ready' ? scan.report : null;
+  const scanOnly = scan.state === 'ready' && (scan.source === 'paste' || !scan.report.usageScanned);
+  // Runs are started by package name; the result says which version was fixed.
   const resurrected = useMemo(
-    () => new Set(Object.entries(runs).filter(([, r]) => r.result?.status === 'proven').map(([name]) => name)),
+    () =>
+      new Set(
+        Object.values(runs)
+          .filter((r) => r.result?.status === 'proven')
+          .map((r) => `${r.result!.package}@${r.result!.version}`),
+      ),
     [runs],
   );
-  const selectedPkg = report?.packages.find((p) => p.name === selected) ?? null;
-  const selectPackage = (name: string) => {
-    if (report?.packages.some((p) => p.name === name)) setSelected(name);
+  const selectedPkg = report?.packages.find((p) => pkgKey(p) === selected) ?? null;
+  /** Accepts name@version, or a bare name (prefers the direct dependency). */
+  const selectPackage = (id: string) => {
+    const match =
+      report?.packages.find((p) => pkgKey(p) === id) ??
+      report?.packages.find((p) => p.name === id && p.direct) ??
+      report?.packages.find((p) => p.name === id);
+    if (match) setSelected(pkgKey(match));
   };
+  const selectedName = selectedPkg?.name ?? null;
 
   return (
     <div className="app">
@@ -149,7 +169,13 @@ export function App() {
             Paste lockfile
           </button>
           {mode === 'live' && (
-            <button type="button" className="btn btn--ghost btn--small" onClick={doReset} title="Clear workspaces, keepers and this page">
+            <button
+              type="button"
+              className="btn btn--ghost btn--small"
+              onClick={doReset}
+              disabled={anyRunning}
+              title={anyRunning ? 'Wait for the resurrection to finish' : 'Clear workspaces, keepers and this page'}
+            >
               Reset
             </button>
           )}
@@ -157,6 +183,14 @@ export function App() {
       </header>
 
       <main className="main">
+        {resetError && (
+          <div className="notice notice--error" role="alert">
+            <p>Reset failed: {resetError}</p>
+            <button type="button" className="btn btn--ghost btn--small" onClick={() => setResetError(null)}>
+              Dismiss
+            </button>
+          </div>
+        )}
         {tab === 'keepers' ? (
           mode ? (
             <KeepersView mode={mode} refreshKey={keeperKey} onOpenGraveyard={() => setTab('graveyard')} />
@@ -178,9 +212,11 @@ export function App() {
                   <DetailPanel
                     pkg={selectedPkg}
                     zombieCount={report.totals.zombies}
+                    scanOnly={scanOnly}
+                    usageScanned={report.usageScanned}
                     resurrected={selected ? resurrected.has(selected) : false}
-                    running={selected ? runs[selected]?.status === 'running' : false}
-                    hasRun={selected ? Boolean(runs[selected]) : false}
+                    running={selectedName ? runs[selectedName]?.status === 'running' : false}
+                    hasRun={selectedName ? Boolean(runs[selectedName]) : false}
                     onResurrect={startResurrect}
                     onShowRun={(name) => {
                       setActiveRun(name);

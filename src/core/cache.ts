@@ -22,7 +22,7 @@ interface Entry<T> {
   value: T;
 }
 
-function keyFile(dir: string, namespace: string, key: string): string {
+export function keyFile(dir: string, namespace: string, key: string): string {
   const safe = key.replace(/[^a-zA-Z0-9@._-]/g, '_').slice(0, 80);
   const hash = createHash('sha1').update(key).digest('hex').slice(0, 10);
   return path.join(dir, namespace, `${safe}-${hash}.json`);

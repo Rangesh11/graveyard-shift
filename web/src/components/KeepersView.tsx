@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { KeeperRecord, WardenDecision, WardenMemory } from '../types';
 import type { Mode, PatrolResponse } from '../api';
-import { getWarden, patrol } from '../api';
+import { demoSimulationPackage, getWarden, patrol } from '../api';
 import { dateTime, plural, ROUTE_LABEL, seconds } from '../format';
 import { Markdown } from './Markdown';
 import { DiffView } from './DiffView';
@@ -41,9 +41,22 @@ export function KeepersView({ mode, refreshKey, onOpenGraveyard }: Props) {
   useEffect(refresh, [refresh, refreshKey]);
 
   const keepers = load.state === 'ready' ? load.memory.keepers : [];
+  const [demoTarget, setDemoTarget] = useState<string | undefined>(undefined);
   useEffect(() => {
-    if (keepers.length && !keepers.some((k) => k.package === simTarget)) setSimTarget(keepers[0].package);
-  }, [keepers, simTarget]);
+    if (mode === 'demo') demoSimulationPackage().then(setDemoTarget).catch(() => setDemoTarget(undefined));
+  }, [mode]);
+  const [userPicked, setUserPicked] = useState(false);
+  useEffect(() => {
+    if (!keepers.length) return;
+    // In the hosted demo, start on the keeper whose simulation was recorded,
+    // even if that answer arrives after the keepers load.
+    const recorded = demoTarget && keepers.some((k) => k.package === demoTarget) ? demoTarget : undefined;
+    if (recorded && !userPicked && simTarget !== recorded) {
+      setSimTarget(recorded);
+      return;
+    }
+    if (!keepers.some((k) => k.package === simTarget)) setSimTarget(recorded ?? keepers[0].package);
+  }, [keepers, simTarget, demoTarget, userPicked]);
 
   const run = async (simulate: boolean) => {
     setBusy(simulate ? 'simulate' : 'patrol');
@@ -82,12 +95,16 @@ export function KeepersView({ mode, refreshKey, onOpenGraveyard }: Props) {
               <select
                 id="sim-target"
                 value={simTarget}
-                onChange={(e) => setSimTarget(e.target.value)}
+                onChange={(e) => {
+                  setUserPicked(true);
+                  setSimTarget(e.target.value);
+                }}
                 disabled={!keepers.length || busy !== null}
               >
                 {keepers.map((k) => (
                   <option key={k.package} value={k.package}>
                     {k.package}
+                    {mode === 'demo' && demoTarget && k.package !== demoTarget ? ' (not recorded)' : ''}
                   </option>
                 ))}
               </select>

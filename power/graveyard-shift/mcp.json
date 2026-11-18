@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "graveyard-shift": {
-      "command": "node",
-      "args": ["/ABSOLUTE/PATH/TO/graveyard-shift/bin/graveyard.mjs", "mcp"],
+      "command": "npx",
+      "args": ["-y", "github:Rangesh11/graveyard-shift", "mcp"],
       "env": {},
       "disabled": false,
       "autoApprove": [

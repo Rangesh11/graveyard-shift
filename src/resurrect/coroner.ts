@@ -66,6 +66,27 @@ export function diagnose(pkg: ScannedPackage, all: ScannedPackage[]): Diagnosis 
     };
   }
 
+  if (pkg.alias) {
+    return {
+      ...base,
+      route: 'replace',
+      automated: false,
+      rationale: [...rationale, `Installed under the alias "${pkg.alias}", so imports use that name. Automatic rewrites do not handle aliases yet; migrate it by hand.`],
+    };
+  }
+
+  if (pkg.importedBy.length === 0) {
+    return {
+      ...base,
+      route: 'replace',
+      automated: false,
+      rationale: [
+        ...rationale,
+        'No source file imports it. It may be used through an executable in package.json scripts, a config file or type definitions, which the Surgeon cannot redirect, so removing it automatically is unsafe.',
+      ],
+    };
+  }
+
   const recipe = findRecipe(pkg.name, pkg.version);
   if (recipe) {
     return {

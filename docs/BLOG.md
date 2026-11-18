@@ -45,24 +45,18 @@ Each time, a second, faithful candidate passed. The `trim@0.0.1` replacement als
 
 Two details I care about:
 
-- **The proof runs sandboxed.** It uses Node's permission model: read-only access, no child processes and an empty environment, so dead package code never sees your secrets.
+- **The proof runs sandboxed.** It uses Node's permission model: read-only file access, no child processes and an empty environment, so dead package code never sees your environment secrets. Node 24 cannot block its network access yet, and I say so in every pull request.
 - **The proof stays in the repo.** The passing run records its cases into a small replay test, which keeps guarding the behaviour after the original package is gone.
 
-## How Kiro shaped it
+## How it was built
 
-I worked spec-first. Each part (scanner, fix routes, proof engine, warden) has its own requirements, design and task files in `.kiro/specs`. When I hit a real bug, it got a bugfix spec instead of a quick patch. On macOS, `/var` is a symlink, which broke paths both inside the sandbox and on the inline route.
+I designed it spec-first. Each part (scanner, fix routes, proof engine, warden) has its own requirements, design and task files in `.kiro/specs`, and a real bug got a bugfix spec instead of a quick patch: on macOS `/var` is a symlink, which broke paths both inside the sandbox and on the inline route. Steering files hold the safety rules every agent follows: check the licence first, keep the public API unchanged, make the smallest possible diff, record where the code came from, and no pull request without a passing proof.
 
-Steering files hold the safety rules every agent follows:
+To be upfront: I wrote the first version of the code with an AI coding assistant (Claude Code) working from those specs, and I continued the build in Kiro, where the hooks rerun the proofs whenever a recipe or shim is saved. A custom MCP server gives the Coroner, Surgeon and Warden agents real data (registry facts, advisories, repo status, package diffs) instead of guesses, and the server, steering and a usage guide are packed into a Kiro Power you can install in one step.
 
-- check the licence first;
-- keep the public API unchanged;
-- make the smallest possible diff;
-- record where the code came from;
-- no pull request without a passing proof.
+My favourite part is that property-based testing is both the product and how I tested the product. A property test on the risk score caught a bug where importing a package more often could *lower* its risk, and an independent review later caught more edge cases (npm aliases, packages used only through their command-line executables), which are now escalated instead of "fixed".
 
-A hook reruns the proofs whenever a recipe or shim is saved. A custom MCP server gives the Coroner, Surgeon and Warden agents real data (registry facts, advisories, repo status, package diffs) instead of guesses. The MCP server, steering and a usage guide are packed into a Power.
-
-My favourite part is that property-based testing is both the product and how I tested the product. The score's own property tests caught a bug where importing a package more often could *lower* its risk.
+**Before publishing:** the second paragraph says the build continued in Kiro. Keep it only if that happened; otherwise cut that half-sentence.
 
 ## Try it
 

@@ -16,6 +16,7 @@ Usage:
         [--runs n] [--no-project-tests] [--json]
         [--open-pr]                               Also push the branch and open a real GitHub pull request
   graveyard warden patrol [--dir d] [--simulate p] Let the keeper bots check for new advisories
+        [--json]                                  Machine-readable result (used by the scheduled workflow)
   graveyard warden status [--dir d]               Show what each keeper remembers
   graveyard serve [--port 8787]                   Start the API and the graveyard map UI
   graveyard mcp                                   Start the MCP server on stdio
@@ -109,6 +110,10 @@ async function main() {
     case 'warden': {
       if (arg === 'patrol') {
         const res = await patrol(dir, { simulate: values.simulate ? { package: values.simulate } : undefined });
+        if (values.json) {
+          console.log(JSON.stringify({ changed: res.changed, events: res.events.map((e) => e.message), drafts: res.drafts.map((d) => ({ title: d.title, branch: d.branch, bodyPath: d.bodyPath, taskPath: d.patchPath })) }, null, 2));
+          return;
+        }
         for (const e of res.events) console.log(`warden  ${e.message}`);
         for (const d of res.drafts) console.log(c.yellow(`\n✎ ${d.title}\n  ${path.relative(process.cwd(), d.bodyPath)}`));
         return;

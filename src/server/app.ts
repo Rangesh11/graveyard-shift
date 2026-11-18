@@ -109,9 +109,39 @@ async function streamResurrection(req: IncomingMessage, res: ServerResponse, pkg
   }
 }
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+function hostnameOf(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    return new URL(value.includes('://') ? value : `http://${value}`).hostname;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * This is a local developer tool that can rewrite and run code, so it only
+ * answers requests addressed to localhost (blocks DNS rebinding) and refuses
+ * cross-site requests to any route with side effects (blocks CSRF).
+ */
+function guard(req: IncomingMessage, pathname: string) {
+  if (process.env.GRAVEYARD_ALLOW_REMOTE === '1') return;
+  const host = hostnameOf(req.headers.host);
+  if (!host || !LOCAL_HOSTS.has(host)) throw new HttpError(403, 'Graveyard Shift only answers requests to localhost.');
+  const sideEffects = req.method !== 'GET' || pathname === '/api/resurrect';
+  if (!sideEffects) return;
+  const origin = req.headers.origin;
+  if (origin && !LOCAL_HOSTS.has(hostnameOf(origin) ?? '')) throw new HttpError(403, 'Cross-site requests are not allowed.');
+  if (req.method === 'POST' && !String(req.headers['content-type'] ?? '').startsWith('application/json')) {
+    throw new HttpError(415, 'Send JSON with content-type: application/json.');
+  }
+}
+
 async function handle(req: IncomingMessage, res: ServerResponse) {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const route = `${req.method} ${url.pathname}`;
+  guard(req, url.pathname);
 
   switch (route) {
     case 'GET /api/health':
@@ -179,7 +209,8 @@ export function startServer(port: number): Promise<void> {
     });
   });
   return new Promise((resolve) => {
-    server.listen(port, () => {
+    // Loopback only by default; set HOST=0.0.0.0 (and GRAVEYARD_ALLOW_REMOTE=1) to expose it deliberately.
+    server.listen(port, process.env.HOST ?? '127.0.0.1', () => {
       console.log(`🪦 Graveyard Shift on http://localhost:${port}  (project: ${path.relative(process.cwd(), EXAMPLE_ROOT) || '.'})`);
       resolve();
     });

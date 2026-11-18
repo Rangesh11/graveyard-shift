@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: Path to a Surgeon task brief in .graveyard/tasks/
+        description: Path to a Surgeon task brief in graveyard/tasks/ (committed by the Warden patrol PR)
         required: true
 permissions:
   contents: write

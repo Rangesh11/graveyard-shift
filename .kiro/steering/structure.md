@@ -27,8 +27,9 @@ src/
     pr.ts            PR title and body
     resurrect.ts     the pipeline: Coroner → Surgeon → prover → PR → Warden
     git.ts           git and subprocess helpers
+    publish.ts       --open-pr: applies the patch in a temp worktree, pushes, gh pr create
   warden/
-    memory.ts        .graveyard/warden.json read/write, adopt, remember
+    memory.ts        keeper memory: committed graveyard/warden.json (merged fixes) + local .graveyard/warden.json (drafts)
     warden.ts        patrol, patch PR drafts, simulated advisories
   server/          HTTP API + static UI
   mcp/server.ts    MCP tools for Kiro agents

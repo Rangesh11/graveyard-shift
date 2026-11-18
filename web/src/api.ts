@@ -216,8 +216,14 @@ export async function patrol(simulatePackage?: string, current?: WardenMemory): 
   }
   if (simulatePackage) {
     const recorded = await getDemo<PatrolResponse>('patrol.json');
-    if (recorded) return recorded;
-    throw new Error('This hosted demo has no recorded advisory simulation.');
+    if (!recorded) throw new Error('This hosted demo has no recorded advisory simulation.');
+    const target = demoSimulationTarget(recorded);
+    if (target && target !== simulatePackage) {
+      throw new Error(
+        `The demo only recorded a simulated advisory for ${target}. Not recorded for ${simulatePackage}: run Graveyard Shift locally (npm start) to simulate it live.`,
+      );
+    }
+    return recorded;
   }
   const memory = current ?? (await getWarden());
   return {
@@ -231,6 +237,22 @@ export async function patrol(simulatePackage?: string, current?: WardenMemory): 
     memory,
     drafts: [],
   };
+}
+
+/** The keeper the recorded demo patrol simulated an advisory for. */
+export function demoSimulationTarget(recorded: PatrolResponse): string | undefined {
+  for (const k of recorded.memory.keepers) {
+    if (k.decisions.some((d) => d.simulated)) return k.package;
+  }
+  const draft = recorded.drafts[0];
+  return draft ? recorded.memory.keepers.find((k) => draft.title.includes(k.package))?.package : undefined;
+}
+
+/** In demo mode, the keeper whose simulated advisory was recorded (so the picker starts there). */
+export async function demoSimulationPackage(): Promise<string | undefined> {
+  if ((await detectMode()) === 'live') return undefined;
+  const recorded = await getDemo<PatrolResponse>('patrol.json');
+  return recorded ? demoSimulationTarget(recorded) : undefined;
 }
 
 export async function reset(): Promise<void> {

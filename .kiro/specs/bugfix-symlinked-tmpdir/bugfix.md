@@ -53,4 +53,4 @@ The property "more import sites never lower the risk" in `test/score.test.ts` wa
 
 ### Fix
 
-Exposure is now `usageSites + dependents` in `src/core/score.ts`, so every extra use adds exposure. All six score properties pass.
+Exposure is now `usageSites + dependents` in `src/core/score.ts`, so every extra use adds exposure. All score properties pass (seven since the deprecated-version rule was added).

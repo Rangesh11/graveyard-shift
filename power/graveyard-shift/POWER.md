@@ -27,15 +27,9 @@ Nothing is published and nothing is merged automatically. Your working tree is n
 
 ## Install
 
-The package is not published to npm. Clone it first:
+Install this Power in Kiro from https://github.com/Rangesh11/graveyard-shift (folder `power/graveyard-shift`). That is the only step: its `mcp.json` starts the server with `npx -y github:Rangesh11/graveyard-shift mcp`, which fetches the tool from GitHub on first use (about 30 seconds). Node.js 22.13 or later and git are required.
 
-```bash
-git clone <this repository's GitHub URL> graveyard-shift
-cd graveyard-shift
-npm install
-```
-
-Then install this Power in Kiro from the GitHub repository (folder `power/graveyard-shift`), and edit `mcp.json` so the path points at your clone. Node.js 22 or later is required.
+To work on the tool itself instead, clone https://github.com/Rangesh11/graveyard-shift, run `npm install`, and point `mcp.json` at `node <clone>/bin/graveyard.mjs mcp`.
 
 Optional: set `GITHUB_TOKEN` for more than 60 repository checks an hour, or `GRAVEYARD_OFFLINE=1` to use cached data only.
 

@@ -32,6 +32,9 @@ export async function scan(input: ScanInput): Promise<ScanReport> {
   const warnings: string[] = [];
   const parsed = parseLockfile(input.lockfile, input.packageJson);
   progress(`Read ${parsed.packages.length} locked packages`);
+  if (parsed.skipped.length) {
+    warnings.push(`Skipped ${parsed.skipped.length} lockfile entr${parsed.skipped.length === 1 ? 'y' : 'ies'} with an invalid name or version (e.g. ${parsed.skipped[0]}).`);
+  }
 
   let usage: UsageIndex | undefined;
   if (input.root) {

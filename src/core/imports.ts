@@ -3,9 +3,11 @@ import { builtinModules } from 'node:module';
 import path from 'node:path';
 
 export const SOURCE_EXTENSIONS = new Set(['.js', '.cjs', '.mjs', '.jsx', '.ts', '.cts', '.mts', '.tsx']);
-// "graveyard" holds code this tool wrote (shims, inlined copies, proofs); its
-// own imports must not count as project usage or be rewritten again.
-const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.graveyard', 'graveyard', '.next', 'out']);
+// Skipped only at the project root: build output, tool folders, and "graveyard",
+// which holds code this tool wrote (shims, inlined copies, proofs). Deeper down
+// only node_modules and dot-folders are skipped, so src/build/x.js still counts.
+const ROOT_SKIP_DIRS = new Set(['dist', 'build', 'coverage', 'graveyard', 'out']);
+const ALWAYS_SKIP_DIRS = new Set(['node_modules']);
 
 /** A module specifier found in source, with the offsets of its text inside the quotes. */
 export interface SpecifierHit {
@@ -15,7 +17,9 @@ export interface SpecifierHit {
   line: number;
 }
 
-const SPECIFIER_RE = /(?:\brequire\s*\(\s*|\bimport\s*\(\s*|\bfrom\s*|\bimport\s+)(['"])([^'"\n]+)\1/g;
+// require('x'), require.resolve('x'), import('x') or import(`x`), from 'x', import 'x'.
+// Template literals count only without ${...} substitutions.
+const SPECIFIER_RE = /(?:\brequire(?:\.resolve)?\s*\(\s*|\bimport\s*\(\s*|\bfrom\s*|\bimport\s+)(['"`])([^'"`\n$]+)\1/g;
 
 export function findSpecifiers(code: string): SpecifierHit[] {
   const hits: SpecifierHit[] = [];
@@ -38,9 +42,14 @@ export function packageNameOf(spec: string): string | undefined {
   return name;
 }
 
-export async function listSourceFiles(root: string): Promise<string[]> {
+/**
+ * Source files under root. Symbolic links are skipped: following them could
+ * read, and later rewrite, files outside the project or its scratch copy.
+ * With `everywhere`, root-level build and tool folders are searched too.
+ */
+export async function listSourceFiles(root: string, opts: { everywhere?: boolean } = {}): Promise<string[]> {
   const out: string[] = [];
-  async function walk(dir: string) {
+  async function walk(dir: string, depth: number) {
     let entries;
     try {
       entries = await readdir(dir, { withFileTypes: true });
@@ -48,14 +57,20 @@ export async function listSourceFiles(root: string): Promise<string[]> {
       return;
     }
     for (const entry of entries) {
+      if (entry.isSymbolicLink()) continue;
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name) && !entry.name.startsWith('.')) await walk(path.join(dir, entry.name));
-      } else if (SOURCE_EXTENSIONS.has(path.extname(entry.name)) && !entry.name.endsWith('.d.ts')) {
+        const skip =
+          ALWAYS_SKIP_DIRS.has(entry.name) ||
+          entry.name.startsWith('.') ||
+          (depth === 0 && !opts.everywhere && ROOT_SKIP_DIRS.has(entry.name)) ||
+          (depth === 0 && entry.name === 'graveyard');
+        if (!skip) await walk(path.join(dir, entry.name), depth + 1);
+      } else if (entry.isFile() && SOURCE_EXTENSIONS.has(path.extname(entry.name)) && !entry.name.endsWith('.d.ts')) {
         out.push(path.join(dir, entry.name));
       }
     }
   }
-  await walk(root);
+  await walk(root, 0);
   return out.sort();
 }
 
