@@ -14,6 +14,7 @@ Usage:
   graveyard diagnose <package> [--dir d] [--json] Ask the Coroner for the safest fix route
   graveyard resurrect <package> [--dir d]         Fix it on a branch, prove it, draft the pull request
         [--runs n] [--no-project-tests] [--json]
+        [--open-pr]                               Also push the branch and open a real GitHub pull request
   graveyard warden patrol [--dir d] [--simulate p] Let the keeper bots check for new advisories
   graveyard warden status [--dir d]               Show what each keeper remembers
   graveyard serve [--port 8787]                   Start the API and the graveyard map UI
@@ -54,6 +55,7 @@ async function main() {
       all: { type: 'boolean' },
       runs: { type: 'string' },
       'no-project-tests': { type: 'boolean' },
+      'open-pr': { type: 'boolean' },
       simulate: { type: 'string' },
       port: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
@@ -94,6 +96,11 @@ async function main() {
         console.log(`  branch   ${result.pr.branch}  (in ${path.relative(process.cwd(), result.pr.workspace)})`);
         console.log(`  PR body  ${path.relative(process.cwd(), result.pr.bodyPath)}`);
         console.log(`  patch    ${path.relative(process.cwd(), result.pr.patchPath)}  (git am < patch to apply)`);
+        if (values['open-pr']) {
+          const { openPullRequest } = await import('./resurrect/publish.ts');
+          const url = await openPullRequest(dir, result.pr);
+          console.log(c.green(`  opened   ${url}`));
+        }
       } else {
         console.log(c.yellow(`\n${result.status.toUpperCase()}\n`) + (result.escalation ?? ''));
       }
