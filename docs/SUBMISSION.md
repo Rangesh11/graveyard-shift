@@ -11,7 +11,7 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 | MCP server, `.kiro` specs/steering/hooks/agents, Power | Written and the MCP server tested; the hooks, agents and Power have **never run in Kiro** — load them there |
 | Headless Surgeon (`surgeon.yml`) | Written, never run: needs the `KIRO_API_KEY` secret and `KIRO_CLI_INSTALL` variable |
 | Hosted demo with sample data | Live: https://rangesh11.github.io/graveyard-shift/ |
-| A fix opened as a real pull request | Done: [haunted-app#1](https://github.com/Rangesh11/haunted-app/pull/1) (left-pad), [haunted-app#2](https://github.com/Rangesh11/haunted-app/pull/2) (trim CVE); CI passes on both |
+| A fix opened as a real pull request | Done: [haunted-app#3](https://github.com/Rangesh11/haunted-app/pull/3) (left-pad), [haunted-app#4](https://github.com/Rangesh11/haunted-app/pull/4) (trim CVE); CI passes on both |
 | Adopt route automation, second ecosystem | Not built (stretch); Adopt is diagnosed and escalated |
 | Kiro Crew app in a second public repo (Best Kiro CrewApp) | **Not built**: needs the Crew SDK, which launched after this code's reference material |
 | Public GitHub repo with MIT licence shown in About | Done: https://github.com/Rangesh11/graveyard-shift |

@@ -18,7 +18,7 @@
 - [x] 11. Escalation reports for non-automated routes
 - [x] 12. Expose it: CLI `graveyard diagnose|resurrect`, API `GET /api/diagnose`, `GET /api/resurrect` (SSE), MCP `graveyard_diagnose`, `graveyard_resurrect`
 - [x] 13. End-to-end test on a copy of the haunted app (`test/resurrect.test.ts`)
-- [x] 14. Open real GitHub pull requests (push branch + `gh pr create`) behind an explicit flag: `--open-pr`, `src/resurrect/publish.ts`; used for Rangesh11/haunted-app#1 and #2
+- [x] 14. Open real GitHub pull requests (push branch + `gh pr create`) behind an explicit flag: `--open-pr`, `src/resurrect/publish.ts`; used for Rangesh11/haunted-app#3 and #2
 - [x] 14a. Audit hardening: escalate when no source file imports the package, or when it is still used after the rewrite (build output, `package.json` script executables); skip symlinks and never write outside the workspace; reject unsafe lockfile names/versions; fail closed without an integrity hash (`test/hardening.test.ts`)
 - [ ] 15. Adopt route automation: fork, patch known flaws, publish under the user's scope (stretch; cut first if behind)
 - [ ] 16. GitHub Action running the Surgeon headless with `kiro-cli chat --no-interactive`: workflow written (`.github/workflows/surgeon.yml`), not run yet; needs the `KIRO_API_KEY` secret and the `KIRO_CLI_INSTALL` variable
