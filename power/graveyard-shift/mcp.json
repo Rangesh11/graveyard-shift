@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "graveyard-shift": {
+      "command": "node",
+      "args": ["/ABSOLUTE/PATH/TO/graveyard-shift/bin/graveyard.mjs", "mcp"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "npm_registry",
+        "osv_advisories",
+        "github_repo_status",
+        "package_diff",
+        "graveyard_scan",
+        "graveyard_diagnose",
+        "warden_memory"
+      ]
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Run the proof when a recipe or shim changes",
+  "description": "Every recipe edit must keep the rule: earlier candidates fail with a counterexample, the last candidate is proven equal to the original.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/resurrect/recipes.ts",
+      "src/resurrect/proof-runner.mjs",
+      "src/resurrect/codec.cjs",
+      "**/graveyard/shims/*.cjs"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A recipe, shim or the proof runner changed. Run `npx vitest run test/prover.test.ts test/codec.test.ts`. If a test fails, show the property name and counterexample, explain which edge case of the original package the candidate misses, and propose the smallest change. Follow .kiro/steering/recipes.md and .kiro/steering/safety-rules.md. Never weaken a property to make a candidate pass unless the input is outside the original package's documented API, and say so explicitly if you do."
+  }
+}

@@ -1,0 +1,24 @@
+# Tasks: Fix routes
+
+- [x] 1. Coroner route selection
+  - `src/resurrect/coroner.ts`: `diagnose`, `directAncestor`, `licenseAllowsCopy`, `PERMISSIVE_LICENSES`, `INLINE_MAX_BYTES`
+  - Tests: `test/coroner.test.ts`
+- [x] 2. Recipe catalogue with ordered candidates and manual hints
+  - `src/resurrect/recipes.ts`: left-pad, trim, object-assign, xtend, arr-flatten, repeat-string; `MANUAL_REPLACEMENTS`; `inlineProperties`
+- [x] 3. Locate the exact original code, hash-checked
+  - `src/resurrect/tarball.ts`: `locateOriginal`, `verifyIntegrity`
+- [x] 4. Scratch workspace on a branch
+  - `src/resurrect/surgeon.ts`: `prepareWorkspace`; `src/resurrect/git.ts`
+- [x] 5. Replace route: shims tried in order until one is proven
+- [x] 6. Inline route: vendored copy with licence and provenance (`vendorPackage`)
+- [x] 7. Import rewrite with sub-path escalation (`rewriteImports`)
+- [x] 8. Dependency removal from package.json and lockfile (`removeDependency`)
+- [x] 9. Run the project's own tests in the workspace (`linkNodeModules` + `npm test`)
+- [x] 10. PR body, diff and patch file (`src/resurrect/pr.ts`, `resurrect.ts`)
+- [x] 11. Escalation reports for non-automated routes
+- [x] 12. Expose it: CLI `graveyard diagnose|resurrect`, API `GET /api/diagnose`, `GET /api/resurrect` (SSE), MCP `graveyard_diagnose`, `graveyard_resurrect`
+- [x] 13. End-to-end test on a copy of the haunted app (`test/resurrect.test.ts`)
+- [ ] 14. Open real GitHub pull requests (push branch + `gh pr create`) behind an explicit flag
+- [ ] 15. Adopt route automation: fork, patch known flaws, publish under the user's scope (stretch; cut first if behind)
+- [ ] 16. GitHub Action running the Surgeon headless with `kiro-cli chat --no-interactive`
+- [ ] 17. More recipes from scanning real repositories

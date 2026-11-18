@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "Re-check score properties",
+  "description": "The scoring rules have monotonicity guarantees that the graveyard map and the ranking rely on.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/core/score.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "src/core/score.ts changed. Run `npx vitest run test/score.test.ts`. If a property fails, report the shrunk counterexample and which guarantee broke (bounds, advisories never lower risk, time never lowers risk, usage never lowers risk, deprecated/archived always zombie, every factor has a reason). Fix the scoring, not the property, unless the property itself is wrong; explain your reasoning."
+  }
+}

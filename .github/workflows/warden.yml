@@ -1,0 +1,34 @@
+# The Warden keeper on a schedule: patrols every adopted package for new
+# advisories and upstream releases, using the memory file committed in
+# .graveyard/warden.json. Copy this into a project that uses Graveyard Shift.
+name: warden-patrol
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  patrol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install Graveyard Shift
+        run: git clone --depth 1 https://github.com/OWNER/graveyard-shift.git "$RUNNER_TEMP/gs" && npm ci --prefix "$RUNNER_TEMP/gs"
+      - name: Patrol
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node "$RUNNER_TEMP/gs/bin/graveyard.mjs" warden patrol --dir .
+      - name: Open a pull request for any drafted patch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          for body in .graveyard/prs/*-*.md; do
+            echo "Drafted: $body"
+            # The Surgeon task brief sits next to it in .graveyard/tasks/; see surgeon.yml.
+          done

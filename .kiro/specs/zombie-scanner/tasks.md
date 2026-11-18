@@ -1,0 +1,29 @@
+# Tasks: Zombie scanner
+
+- [x] 1. Shared types for packages, signals, scores and reports
+  - `src/core/types.ts` (UI-safe, no Node imports)
+- [x] 2. Lockfile parser for versions 1, 2 and 3
+  - `src/core/lockfile.ts`: `parseLockfile`, `nameFromPath`, `resolveFrom`, `LockfileError`
+  - Tests: `test/lockfile.test.ts` (3 example tests, 3 properties)
+- [x] 3. Import finder and usage index
+  - `src/core/imports.ts`: `findSpecifiers`, `packageNameOf`, `listSourceFiles`, `scanUsage`
+  - Tests: `test/imports.test.ts` (offset property)
+- [x] 4. Disk cache with TTLs, offline mode and shipped fixtures
+  - `src/core/cache.ts`: `cached`, `fetchJson`, `mapLimit`, `snapshotToFixture`
+  - `fixtures/cache/` recorded by `scripts/record-demo.ts`
+- [x] 5. npm registry client
+  - `src/core/registry.ts`: `getPackageDoc`, `trimDoc`, `factsFor`
+- [x] 6. OSV advisories (batch + details)
+  - `src/core/osv.ts`: `advisoriesFor`, `toAdvisory`
+- [x] 7. GitHub repository status
+  - `src/core/github.ts`: `parseGitHubRepo`, `repoStatus`
+- [x] 8. Pure scoring
+  - `src/core/score.ts`: `deadness`, `statusOf`, `scorePackage`, `daysBetween`
+  - Tests: `test/score.test.ts` (6 properties)
+- [x] 9. Scanner orchestration and ranking
+  - `src/core/scanner.ts`: `scan`, `scanProjectDir`
+- [x] 10. Expose the scan
+  - CLI `graveyard scan` (`src/cli.ts`), `GET /api/scan/example` and `POST /api/scan` (`src/server/app.ts`), MCP `graveyard_scan` (`src/mcp/server.ts`)
+- [x] 11. Graveyard map in the web UI (`web/src/components/GraveyardMap.tsx`)
+- [ ] 12. Scan three real public repositories and publish the zombie counts in the write-up
+- [ ] 13. Second ecosystem (planned, not started)

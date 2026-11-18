@@ -1,0 +1,42 @@
+# Runs the Kiro Surgeon agent headless on a task the Warden queued.
+# Requires a KIRO_API_KEY repository secret. Kiro CLI flags follow the Kiro
+# headless-mode docs; check them against the version you install.
+name: surgeon
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Path to a Surgeon task brief in .graveyard/tasks/
+        required: true
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  surgeon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      # Set the repository variable KIRO_CLI_INSTALL to the install command from
+      # the Kiro CLI docs (kept out of this file so it never goes stale).
+      - name: Install Kiro CLI
+        run: ${{ vars.KIRO_CLI_INSTALL }}
+      - name: Surgeon
+        env:
+          KIRO_API_KEY: ${{ secrets.KIRO_API_KEY }}
+        run: |
+          kiro-cli chat --no-interactive --agent surgeon \
+            "Follow the task brief in ${{ inputs.task }}. Obey .kiro/steering/safety-rules.md. Prove the change with npm test before you finish."
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch="graveyard/surgeon-${{ github.run_id }}"
+          git switch -c "$branch"
+          git add -A
+          git -c user.name="Graveyard Shift" -c user.email="surgeon@graveyard-shift.invalid" commit -m "Surgeon patch for ${{ inputs.task }}" || exit 0
+          git push origin "$branch"
+          gh pr create --title "Surgeon patch: ${{ inputs.task }}" --body "Automated patch from the Surgeon agent. A human must review it."

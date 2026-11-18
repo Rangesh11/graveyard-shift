@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Sync the README Kiro feature table",
+  "description": "Run by hand after changing specs, steering, hooks, agents, MCP settings or the Power.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Compare the \"Built with Kiro\" feature table in README.md with what exists under .kiro/ (specs, steering, hooks, agents, settings/mcp.json) and power/graveyard-shift/. Update the table rows so each one names the real files and what they do. Mark anything that is planned and not built as planned. Change nothing else in the README."
+  }
+}
