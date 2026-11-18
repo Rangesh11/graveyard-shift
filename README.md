@@ -4,6 +4,9 @@
 
 Built for Kiroween 2026 (Resurrection category). MIT licensed.
 
+- **Live demo:** https://rangesh11.github.io/graveyard-shift/ (replays a recorded real run; run it locally for live fixes)
+- **Real pull requests it opened:** [left-pad replaced, with the rejected `padStart` candidate](https://github.com/Rangesh11/haunted-app/pull/1) · [trim@0.0.1 ReDoS (CVE-2020-7753) removed](https://github.com/Rangesh11/haunted-app/pull/2), in the demo target repo [Rangesh11/haunted-app](https://github.com/Rangesh11/haunted-app), where CI passes
+
 ## The problem
 
 Most software depends on open-source packages that nobody maintains. When a flaw turns up in one, nobody ships the fix. Scanners tell you a package is dead but fix nothing, and version bots have no newer release to bump to. In a 2026 audit, 93% of commercial codebases contained components with no development in two years (Black Duck OSSRA 2026). Since September 11, 2026, EU law has required makers of digital products to send an early warning within 24 hours of a flaw being actively exploited.
@@ -81,7 +84,7 @@ node bin/graveyard.mjs resurrect left-pad --dir examples/haunted-app
 | --- | --- |
 | `scan [dir] [--all] [--json]` | Rank the zombies in a project |
 | `diagnose <pkg> [--dir d]` | The Coroner's route and reasons |
-| `resurrect <pkg> [--dir d] [--runs n]` | Fix on a scratch branch, prove, write the PR body and patch to `.graveyard/prs/` |
+| `resurrect <pkg> [--dir d] [--runs n] [--open-pr]` | Fix on a scratch branch, prove, write the PR body and patch to `.graveyard/prs/`; `--open-pr` pushes the branch and opens a real GitHub PR (your checkout is not touched) |
 | `warden patrol [--dir d] [--simulate pkg]` | Keeper bots check for new advisories and releases |
 | `warden status [--dir d]` | What each keeper remembers |
 | `serve [--port]` / `mcp` | Web UI and API / MCP server on stdio |
@@ -127,7 +130,7 @@ fixtures/cache/  registry/advisory snapshot for offline runs and tests
 
 ## Hosted demo
 
-`npm run build` produces a static site in `web/dist`. With no API behind it, the UI replays the real run recorded in `web/public/demo/` and labels it **Demo data, recorded run**. To refresh the recording, run `npm run demo:record`.
+Live at https://rangesh11.github.io/graveyard-shift/, deployed by `.github/workflows/pages.yml`. `npm run build` produces the same static site in `web/dist`. With no API behind it, the UI replays the real run recorded in `web/public/demo/` and labels it **Demo data, recorded run**. To refresh the recording, run `npm run demo:record`.
 
 ## Limits, honestly
 

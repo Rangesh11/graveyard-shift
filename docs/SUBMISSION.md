@@ -6,13 +6,14 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 
 | Item | Status |
 | --- | --- |
-| Scanner, graveyard map, Inline and Replace routes, proof tests, PR output | Built and tested (`npm test`, 38 tests) |
+| Scanner, graveyard map, Inline and Replace routes, proof tests, PR output | Built and tested (`npm test`, 38 tests, CI green) |
 | Keeper (Warden) with memory, scheduled patrol | Built as CLI + `.github/workflows/warden.yml` |
 | MCP server, `.kiro` specs/steering/hooks/agents, Power | Written; validate hooks, agents and the Power inside Kiro |
-| Hosted demo with sample data | `npm run build` → static `web/dist` replays a recorded real run |
+| Hosted demo with sample data | Live: https://rangesh11.github.io/graveyard-shift/ |
+| A fix opened as a real pull request | Done: [haunted-app#1](https://github.com/Rangesh11/haunted-app/pull/1) (left-pad), [haunted-app#2](https://github.com/Rangesh11/haunted-app/pull/2) (trim CVE); CI passes on both |
 | Adopt route automation, second ecosystem | Not built (stretch); Adopt is diagnosed and escalated |
 | Kiro Crew app in a second public repo (Best Kiro CrewApp) | **Not built**: needs the Crew SDK, which launched after this code's reference material |
-| Public GitHub repo with MIT licence shown in About | You: create the repo, push, set the licence |
+| Public GitHub repo with MIT licence shown in About | Done: https://github.com/Rangesh11/graveyard-shift |
 | `.kiro` committed and not in `.gitignore` | Done (`.gitignore` does not list it) |
 | Demo video under 3 minutes, public on YouTube | You |
 | Blog post (Bonus Blog), Social Blitz post | Drafts in `docs/BLOG.md` and `docs/SOCIAL.md`; you publish them |
