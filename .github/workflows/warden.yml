@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: 24
       - name: Install Graveyard Shift
-        run: git clone --depth 1 https://github.com/OWNER/graveyard-shift.git "$RUNNER_TEMP/gs" && npm ci --prefix "$RUNNER_TEMP/gs"
+        run: git clone --depth 1 https://github.com/Rangesh11/graveyard-shift.git "$RUNNER_TEMP/gs" && npm ci --prefix "$RUNNER_TEMP/gs"
       - name: Patrol
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
