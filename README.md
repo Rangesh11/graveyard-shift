@@ -4,6 +4,7 @@
 
 Built for Kiroween 2026 (Resurrection category). MIT licensed.
 
+- **Demo video (2 min):** https://youtu.be/Ub9N9ouvqxE
 - **Live demo:** https://rangesh11.github.io/graveyard-shift/ (replays a recorded real run; run it locally for live fixes)
 - **Real pull requests it opened:** [left-pad replaced, with the rejected `padStart` candidate](https://github.com/Rangesh11/haunted-app/pull/3) · [trim@0.0.1 ReDoS (CVE-2020-7753) removed](https://github.com/Rangesh11/haunted-app/pull/4), in the demo target repo [Rangesh11/haunted-app](https://github.com/Rangesh11/haunted-app), where CI passes
 

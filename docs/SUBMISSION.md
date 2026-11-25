@@ -16,7 +16,7 @@ Category: **Resurrection**. Deadline: December 4, 2:00 pm Pacific (December 5, 3
 | Kiro Crew app in a second public repo (Best Kiro CrewApp) | **Not built**: needs the Crew SDK, which launched after this code's reference material |
 | Public GitHub repo with MIT licence shown in About | Done: https://github.com/Rangesh11/graveyard-shift |
 | `.kiro` committed and not in `.gitignore` | Done (`.gitignore` does not list it) |
-| Demo video under 3 minutes, public on YouTube | You |
+| Demo video under 3 minutes, public on YouTube | Done: https://youtu.be/Ub9N9ouvqxE (2:02, computer voice-over; re-record with your own voice and a Kiro clip if you like) |
 | Blog post (Bonus Blog), Social Blitz post | Drafts in `docs/BLOG.md` and `docs/SOCIAL.md`; you publish them |
 | Scan of three real public repos (Impact) | Done: `docs/REAL-WORLD.md` |
 | 4,000 Kiro credits request (by Dec 1, 12:00 pm Pacific) | You |
